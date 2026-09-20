@@ -1,0 +1,286 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  PENDING
+  ON_HOLD
+  RESOLVED
+  CLOSED
+}
+
+enum CommentType {
+  REPLY
+  INTERNAL_NOTE
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50) // SUPER_ADMIN, ADMIN, AGENT, EMPLOYEE
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  users       User[]
+
+  @@map("roles")
+}
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  status      String   @default("ACTIVE") @db.VarChar(20) // ACTIVE, INACTIVE
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  users       User[]
+
+  @@map("departments")
+}
+
+model Group {
+  id                     Int                       @id @default(autoincrement())
+  name                   String                    @unique @db.VarChar(100)
+  description            String?                   @db.VarChar(255)
+  status                 String                    @default("ACTIVE") @db.VarChar(20) // ACTIVE, INACTIVE
+  createdAt              DateTime                  @default(now()) @map("created_at")
+  updatedAt              DateTime                  @updatedAt @map("updated_at")
+  agentGroups            AgentGroup[]
+  tickets                Ticket[]
+  oldAssignmentHistories TicketAssignmentHistory[] @relation("OldGroupAssignment")
+  newAssignmentHistories TicketAssignmentHistory[] @relation("NewGroupAssignment")
+
+  @@map("groups")
+}
+
+model AgentGroup {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  groupId   Int      @map("group_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@map("agent_groups")
+}
+
+model TicketType {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  status      String   @default("ACTIVE") @db.VarChar(20) // ACTIVE, INACTIVE
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tickets     Ticket[]
+
+  @@map("ticket_types")
+}
+
+model Tag {
+  id         Int         @id @default(autoincrement())
+  name       String      @unique @db.VarChar(50)
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+  ticketTags TicketTag[]
+
+  @@map("tags")
+}
+
+model User {
+  id                    Int                       @id @default(autoincrement())
+  name                  String                    @db.VarChar(100)
+  email                 String                    @unique @db.VarChar(150)
+  employeeId            String                    @unique @db.VarChar(50) @map("employee_id")
+  mobile                String?                   @db.VarChar(20)
+  departmentId          Int?                      @map("department_id")
+  roleId                Int                       @map("role_id")
+  passwordHash          String                    @db.VarChar(255) @map("password_hash")
+  status                String                    @default("ACTIVE") @db.VarChar(20) // ACTIVE, INACTIVE
+  createdAt             DateTime                  @default(now()) @map("created_at")
+  updatedAt             DateTime                  @updatedAt @map("updated_at")
+
+  department            Department?               @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  role                  Role                      @relation(fields: [roleId], references: [id])
+  agentGroups           AgentGroup[]
+  contactTickets        Ticket[]                  @relation("ContactUser")
+  assignedTickets       Ticket[]                  @relation("AssignedAgent")
+  createdTickets        Ticket[]                  @relation("CreatedByUser")
+  ticketComments        TicketComment[]
+  statusChanges         TicketStatusHistory[]
+  oldAgentAssignments   TicketAssignmentHistory[] @relation("OldAgentAssignment")
+  newAgentAssignments   TicketAssignmentHistory[] @relation("NewAgentAssignment")
+  assignmentChangesMade TicketAssignmentHistory[] @relation("ChangedByUser")
+  auditLogs             AuditLog[]
+  refreshTokens         RefreshToken[]
+  passwordResetTokens   PasswordResetToken[]
+
+  @@index([roleId])
+  @@index([departmentId])
+  @@index([name])
+  @@index([email])
+  @@index([employeeId])
+  @@map("users")
+}
+
+model TicketSequence {
+  id            Int      @id @default(1)
+  currentNumber Int      @default(0) @map("current_number")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("ticket_sequences")
+}
+
+model Ticket {
+  id                  BigInt                    @id @default(autoincrement())
+  ticketNumber        String                    @unique @db.VarChar(5) @map("ticket_number")
+  contactId           Int                       @map("contact_id")
+  subject             String                    @db.VarChar(255)
+  ticketTypeId        Int                       @map("ticket_type_id")
+  status              TicketStatus              @default(OPEN)
+  groupId             Int                       @map("group_id")
+  agentId             Int?                      @map("agent_id")
+  createdBy           Int                       @map("created_by")
+  description         String                    @db.LongText
+  createdAt           DateTime                  @default(now()) @map("created_at")
+  updatedAt           DateTime                  @updatedAt @map("updated_at")
+  resolvedAt          DateTime?                 @map("resolved_at")
+  closedAt            DateTime?                 @map("closed_at")
+
+  contact             User                      @relation("ContactUser", fields: [contactId], references: [id])
+  ticketType          TicketType                @relation(fields: [ticketTypeId], references: [id])
+  group               Group                     @relation(fields: [groupId], references: [id])
+  agent               User?                     @relation("AssignedAgent", fields: [agentId], references: [id], onDelete: SetNull)
+  creator             User                      @relation("CreatedByUser", fields: [createdBy], references: [id])
+
+  comments            TicketComment[]
+  tags                TicketTag[]
+  statusHistories     TicketStatusHistory[]
+  assignmentHistories TicketAssignmentHistory[]
+
+  @@index([ticketNumber])
+  @@index([status])
+  @@index([groupId])
+  @@index([agentId])
+  @@index([contactId])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("tickets")
+}
+
+model TicketComment {
+  id          BigInt      @id @default(autoincrement())
+  ticketId    BigInt      @map("ticket_id")
+  userId      Int         @map("user_id")
+  commentType CommentType @default(REPLY) @map("comment_type")
+  body        String      @db.LongText
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  ticket      Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@index([ticketId])
+  @@index([commentType])
+  @@map("ticket_comments")
+}
+
+model TicketTag {
+  id        BigInt   @id @default(autoincrement())
+  ticketId  BigInt   @map("ticket_id")
+  tagId     Int      @map("tag_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([ticketId, tagId])
+  @@map("ticket_tags")
+}
+
+model TicketStatusHistory {
+  id        BigInt       @id @default(autoincrement())
+  ticketId  BigInt       @map("ticket_id")
+  oldStatus TicketStatus @map("old_status")
+  newStatus TicketStatus @map("new_status")
+  changedBy Int          @map("changed_by")
+  changedAt DateTime     @default(now()) @map("changed_at")
+
+  ticket    Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [changedBy], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_status_history")
+}
+
+model TicketAssignmentHistory {
+  id         BigInt   @id @default(autoincrement())
+  ticketId   BigInt   @map("ticket_id")
+  oldGroupId Int?     @map("old_group_id")
+  newGroupId Int?     @map("new_group_id")
+  oldAgentId Int?     @map("old_agent_id")
+  newAgentId Int?     @map("new_agent_id")
+  changedBy  Int      @map("changed_by")
+  changedAt  DateTime @default(now()) @map("changed_at")
+
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  oldGroup   Group?   @relation("OldGroupAssignment", fields: [oldGroupId], references: [id])
+  newGroup   Group?   @relation("NewGroupAssignment", fields: [newGroupId], references: [id])
+  oldAgent   User?    @relation("OldAgentAssignment", fields: [oldAgentId], references: [id])
+  newAgent   User?    @relation("NewAgentAssignment", fields: [newAgentId], references: [id])
+  changer    User     @relation("ChangedByUser", fields: [changedBy], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_assignment_history")
+}
+
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  action    String   @db.VarChar(100)
+  entity    String   @db.VarChar(100)
+  entityId  String   @db.VarChar(100) @map("entity_id")
+  oldValue  String?  @db.Text @map("old_value")
+  newValue  String?  @db.Text @map("new_value")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}
+
+model RefreshToken {
+  id        BigInt    @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  tokenHash String    @unique @db.VarChar(255) @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        BigInt    @id @default(autoincrement())
+  userId    Int       @map("user_id")
+  tokenHash String    @unique @db.VarChar(255) @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("password_reset_tokens")
+}
