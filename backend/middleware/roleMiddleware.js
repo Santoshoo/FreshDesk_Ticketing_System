@@ -22,4 +22,5 @@ export function requireRoles(...allowedRoles) {
 }
 
 export const isAdmin = requireRoles('SUPER_ADMIN', 'ADMIN');
+export const isSuperAdmin = requireRoles('SUPER_ADMIN');
 export const isAgentOrAdmin = requireRoles('SUPER_ADMIN', 'ADMIN', 'AGENT');

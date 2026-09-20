@@ -194,17 +194,28 @@ export class TicketService {
 
     if (search && search.trim()) {
       const cleanSearch = search.replace(/^#/, '').trim();
-      where.OR = [
-        { ticketNumber: { contains: cleanSearch } },
-        { subject: { contains: cleanSearch } },
-        { contactEmail: { contains: cleanSearch } },
-        { contactName: { contains: cleanSearch } },
-        { contact: { name: { contains: cleanSearch } } },
-        { contact: { email: { contains: cleanSearch } } },
-        { contact: { employeeId: { contains: cleanSearch } } },
-        { employeeEmail: { email: { contains: cleanSearch } } },
-        { employeeEmail: { normalizedEmail: { contains: cleanSearch } } },
-      ];
+      const isTicketNumberFormat = /^\d+$/.test(cleanSearch);
+
+      if (isTicketNumberFormat) {
+        const paddedTicketNum = cleanSearch.padStart(5, '0');
+        where.OR = [
+          { ticketNumber: cleanSearch },
+          { ticketNumber: paddedTicketNum },
+          { ticketNumber: { contains: cleanSearch } },
+        ];
+      } else {
+        where.OR = [
+          { ticketNumber: { contains: cleanSearch } },
+          { subject: { contains: cleanSearch } },
+          { contactEmail: { contains: cleanSearch } },
+          { contactName: { contains: cleanSearch } },
+          { contact: { name: { contains: cleanSearch } } },
+          { contact: { email: { contains: cleanSearch } } },
+          { contact: { employeeId: { contains: cleanSearch } } },
+          { employeeEmail: { email: { contains: cleanSearch } } },
+          { employeeEmail: { normalizedEmail: { contains: cleanSearch } } },
+        ];
+      }
     }
 
     if (status) {

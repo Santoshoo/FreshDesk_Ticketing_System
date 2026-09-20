@@ -51,7 +51,7 @@ export default function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             {/* Public Auth Route */}
             <Route

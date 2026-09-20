@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Tag, Edit2, AlertCircle } from 'lucide-react';
+import { Plus, Search, Tag, Edit2, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import ticketTypeApi from '../../services/ticketTypeApi.js';
 import { Card, Modal, EmptyState } from '../../components/ui/index.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import TicketTypeExcelUploadModal from '../../components/TicketTypeExcelUploadModal.jsx';
 
 export default function TicketTypes() {
+  const { isSuperAdmin } = useAuth();
   const [types, setTypes] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [editingType, setEditingType] = useState(null);
   const [error, setError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
@@ -87,13 +91,25 @@ export default function TicketTypes() {
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add Ticket Type</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {isSuperAdmin && (
+            <button
+              onClick={() => setIsExcelModalOpen(true)}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98]"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>Upload Ticket Types (Excel)</span>
+            </button>
+          )}
+
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Ticket Type</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
@@ -229,6 +245,12 @@ export default function TicketTypes() {
           </div>
         </form>
       </Modal>
+
+      <TicketTypeExcelUploadModal
+        isOpen={isExcelModalOpen}
+        onClose={() => setIsExcelModalOpen(false)}
+        onSuccess={() => fetchTypes()}
+      />
     </div>
   );
 }

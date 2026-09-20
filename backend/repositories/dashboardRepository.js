@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { prisma } from '../config/database.js';
 
 export class DashboardRepository {
@@ -67,23 +68,7 @@ export class DashboardRepository {
     startDate.setDate(startDate.getDate() - (days - 1));
     startDate.setHours(0, 0, 0, 0);
 
-    const trendWhere = {
-      ...where,
-      createdAt: {
-        gte: startDate,
-      },
-    };
-
-    const tickets = await prisma.ticket.findMany({
-      where: trendWhere,
-      select: {
-        createdAt: true,
-        resolvedAt: true,
-        status: true,
-      },
-    });
-
-    // Build day map for the past 7 days
+    // Build day map for the past N days
     const dayMap = {};
     for (let i = 0; i < days; i++) {
       const d = new Date();
@@ -93,16 +78,34 @@ export class DashboardRepository {
       dayMap[key] = { date: key, label, created: 0, resolved: 0 };
     }
 
-    tickets.forEach((t) => {
-      const createdKey = t.createdAt.toISOString().split('T')[0];
-      if (dayMap[createdKey]) {
-        dayMap[createdKey].created += 1;
+    const agentIdFilter = where.agentId ? Prisma.sql`AND agent_id = ${where.agentId}` : Prisma.empty;
+    const groupIdFilter = where.groupId ? Prisma.sql`AND group_id = ${where.groupId}` : Prisma.empty;
+    const contactIdFilter = where.contactId ? Prisma.sql`AND contact_id = ${where.contactId}` : Prisma.empty;
+
+    const [createdStats, resolvedStats] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') as dateStr, COUNT(id) as count
+        FROM tickets
+        WHERE created_at >= ${startDate} ${agentIdFilter} ${groupIdFilter} ${contactIdFilter}
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+      `,
+      prisma.$queryRaw`
+        SELECT DATE_FORMAT(resolved_at, '%Y-%m-%d') as dateStr, COUNT(id) as count
+        FROM tickets
+        WHERE resolved_at >= ${startDate} ${agentIdFilter} ${groupIdFilter} ${contactIdFilter}
+        GROUP BY DATE_FORMAT(resolved_at, '%Y-%m-%d')
+      `,
+    ]);
+
+    createdStats.forEach((r) => {
+      if (r.dateStr && dayMap[r.dateStr]) {
+        dayMap[r.dateStr].created = Number(r.count);
       }
-      if (t.resolvedAt) {
-        const resolvedKey = t.resolvedAt.toISOString().split('T')[0];
-        if (dayMap[resolvedKey]) {
-          dayMap[resolvedKey].resolved += 1;
-        }
+    });
+
+    resolvedStats.forEach((r) => {
+      if (r.dateStr && dayMap[r.dateStr]) {
+        dayMap[r.dateStr].resolved = Number(r.count);
       }
     });
 

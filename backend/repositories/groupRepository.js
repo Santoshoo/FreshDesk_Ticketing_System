@@ -45,6 +45,21 @@ export class GroupRepository {
     return prisma.group.create({ data });
   }
 
+  async upsertGroup({ name, description, status = 'ACTIVE' }) {
+    return prisma.group.upsert({
+      where: { name },
+      update: {
+        description: description !== undefined ? description : undefined,
+        status: status || 'ACTIVE',
+      },
+      create: {
+        name,
+        description: description || null,
+        status: status || 'ACTIVE',
+      },
+    });
+  }
+
   async update(id, data) {
     return prisma.group.update({
       where: { id },

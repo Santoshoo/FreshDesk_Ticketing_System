@@ -21,6 +21,11 @@ export const groupApi = {
     return res.data;
   },
 
+  bulkCreate: async (groups) => {
+    const res = await api.post('/groups/bulk', { groups });
+    return res.data;
+  },
+
   getAgentsByGroup: async (groupId, params = {}) => {
     const res = await api.get(`/groups/${groupId}/agents`, { params });
     return res.data;

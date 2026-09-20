@@ -20,6 +20,11 @@ export const ticketTypeApi = {
     const res = await api.put(`/ticket-types/${id}`, data);
     return res.data;
   },
+
+  bulkCreate: async (types) => {
+    const res = await api.post('/ticket-types/bulk', { types });
+    return res.data;
+  },
 };
 
 export default ticketTypeApi;

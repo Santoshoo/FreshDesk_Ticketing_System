@@ -60,6 +60,47 @@ export class TicketTypeService {
     });
   }
 
+  async bulkCreateTicketTypes(typesList = []) {
+    if (!Array.isArray(typesList) || typesList.length === 0) {
+      const err = new Error('No valid ticket type records provided for bulk import');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const results = [];
+    const errors = [];
+
+    for (let i = 0; i < typesList.length; i++) {
+      const item = typesList[i];
+      const rawName = item.name || item['Type Name'] || item['ticket_type_name'] || item['Name'];
+
+      if (!rawName || typeof rawName !== 'string' || !rawName.trim()) {
+        errors.push({ row: i + 1, error: 'Ticket type name is missing or invalid' });
+        continue;
+      }
+
+      const name = rawName.trim();
+      const rawDesc = item.description || item['Description'] || item['desc'] || '';
+      const description = typeof rawDesc === 'string' ? rawDesc.trim() : null;
+      const rawStatus = (item.status || item['Status'] || 'ACTIVE').toUpperCase().trim();
+      const status = rawStatus === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
+
+      try {
+        const saved = await ticketTypeRepository.upsertTicketType({ name, description, status });
+        results.push(saved);
+      } catch (err) {
+        errors.push({ row: i + 1, type: name, error: err.message });
+      }
+    }
+
+    return {
+      importedCount: results.length,
+      errorCount: errors.length,
+      importedTypes: results,
+      errors,
+    };
+  }
+
   async updateTicketType(id, { name, description, status }) {
     const existing = await ticketTypeRepository.findById(parseInt(id, 10));
     if (!existing) {

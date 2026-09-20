@@ -35,6 +35,21 @@ export class TicketTypeRepository {
     return prisma.ticketType.create({ data });
   }
 
+  async upsertTicketType({ name, description, status = 'ACTIVE' }) {
+    return prisma.ticketType.upsert({
+      where: { name },
+      update: {
+        description: description !== undefined ? description : undefined,
+        status: status || 'ACTIVE',
+      },
+      create: {
+        name,
+        description: description || null,
+        status: status || 'ACTIVE',
+      },
+    });
+  }
+
   async update(id, data) {
     return prisma.ticketType.update({
       where: { id },

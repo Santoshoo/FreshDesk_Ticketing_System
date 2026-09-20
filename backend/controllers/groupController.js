@@ -30,6 +30,16 @@ export class GroupController {
     }
   }
 
+  async bulkCreate(req, res, next) {
+    try {
+      const { groups } = req.body;
+      const result = await groupService.bulkCreateGroups(groups);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async update(req, res, next) {
     try {
       const group = await groupService.updateGroup(req.params.id, req.body);

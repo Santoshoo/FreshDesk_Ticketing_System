@@ -30,6 +30,16 @@ export class TicketTypeController {
     }
   }
 
+  async bulkCreate(req, res, next) {
+    try {
+      const { types } = req.body;
+      const result = await ticketTypeService.bulkCreateTicketTypes(types);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async update(req, res, next) {
     try {
       const ticketType = await ticketTypeService.updateTicketType(req.params.id, req.body);
