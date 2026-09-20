@@ -1,15 +1,60 @@
 import { prisma } from '../config/database.js';
 
+export function normalizeTicketContact(ticket) {
+  if (!ticket) return ticket;
+  let contactObj = null;
+
+  if (ticket.contact) {
+    contactObj = {
+      id: ticket.contact.id,
+      name: ticket.contact.name,
+      email: ticket.contact.email,
+      employeeId: ticket.contact.employeeId || null,
+      mobile: ticket.contact.mobile || null,
+      department: ticket.contact.department || null,
+      source: 'USER',
+    };
+  } else if (ticket.employeeEmail) {
+    contactObj = {
+      id: ticket.employeeEmail.id,
+      name: ticket.contactName || (ticket.employeeEmail.email ? ticket.employeeEmail.email.split('@')[0] : 'Requester'),
+      email: ticket.employeeEmail.email,
+      employeeId: null,
+      mobile: null,
+      department: ticket.employeeEmail.department || null,
+      source: 'EMPLOYEE_EMAIL_MASTER',
+    };
+  } else if (ticket.contactEmail) {
+    contactObj = {
+      id: null,
+      name: ticket.contactName || 'Requester',
+      email: ticket.contactEmail,
+      employeeId: null,
+      mobile: null,
+      department: null,
+      source: ticket.contactSource || 'EXTERNAL',
+    };
+  }
+
+  return {
+    ...ticket,
+    contact: contactObj,
+  };
+}
+
 export class TicketRepository {
   async findMany({ skip = 0, take = 50, where = {} } = {}) {
-    return prisma.ticket.findMany({
+    const tickets = await prisma.ticket.findMany({
       where,
       skip,
       take,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         contact: {
-          select: { id: true, name: true, email: true, employeeId: true, mobile: true, department: { select: { name: true } } },
+          select: { id: true, name: true, email: true, employeeId: true, mobile: true, department: { select: { id: true, name: true } } },
+        },
+        employeeEmail: {
+          select: { id: true, email: true, normalizedEmail: true, department: { select: { id: true, name: true } } },
         },
         ticketType: {
           select: { id: true, name: true },
@@ -25,6 +70,8 @@ export class TicketRepository {
         },
       },
     });
+
+    return tickets.map(normalizeTicketContact);
   }
 
   async count(where = {}) {
@@ -33,11 +80,14 @@ export class TicketRepository {
 
   async findById(id) {
     const numericId = typeof id === 'string' && /^\d+$/.test(id) ? BigInt(id) : id;
-    return prisma.ticket.findUnique({
+    const ticket = await prisma.ticket.findUnique({
       where: { id: numericId },
       include: {
         contact: {
-          select: { id: true, name: true, email: true, employeeId: true, mobile: true, department: { select: { name: true } } },
+          select: { id: true, name: true, email: true, employeeId: true, mobile: true, department: { select: { id: true, name: true } } },
+        },
+        employeeEmail: {
+          select: { id: true, email: true, normalizedEmail: true, department: { select: { id: true, name: true } } },
         },
         ticketType: {
           select: { id: true, name: true },
@@ -81,15 +131,20 @@ export class TicketRepository {
         },
       },
     });
+
+    return normalizeTicketContact(ticket);
   }
 
   async findByTicketNumber(ticketNumber) {
     const cleanNumber = ticketNumber.replace(/^#/, '').trim();
-    return prisma.ticket.findUnique({
+    const ticket = await prisma.ticket.findUnique({
       where: { ticketNumber: cleanNumber },
       include: {
         contact: {
-          select: { id: true, name: true, email: true, employeeId: true, department: { select: { name: true } } },
+          select: { id: true, name: true, email: true, employeeId: true, department: { select: { id: true, name: true } } },
+        },
+        employeeEmail: {
+          select: { id: true, email: true, normalizedEmail: true, department: { select: { id: true, name: true } } },
         },
         ticketType: true,
         group: true,
@@ -97,6 +152,8 @@ export class TicketRepository {
         creator: true,
       },
     });
+
+    return normalizeTicketContact(ticket);
   }
 
   async updateTicket(id, data) {

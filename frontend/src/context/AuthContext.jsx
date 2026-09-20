@@ -4,95 +4,85 @@ import authApi from '../services/authApi.js';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => {
-    // Check URL query param first (from Google OAuth redirect)
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get('token');
-    if (urlToken) {
-      localStorage.setItem('kims_token', urlToken);
-      // Clean query params from URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return urlToken;
-    }
-    return localStorage.getItem('kims_token');
-  });
-
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('kims_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Restore authenticated session on app load
   useEffect(() => {
-    async function loadUser() {
-      if (token) {
-        try {
-          const res = await authApi.getMe();
-          if (res.success && res.data) {
-            setUser(res.data);
-            localStorage.setItem('kims_user', JSON.stringify(res.data));
-          }
-        } catch (err) {
-          console.error('Failed to restore session:', err);
-          logout();
-        }
+    async function initAuth() {
+      const token = localStorage.getItem('kims_token');
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
-    }
-    loadUser();
-  }, [token]);
 
-  const login = async (email, password) => {
-    const res = await authApi.login(email, password);
-    if (res.success && res.data) {
-      const { accessToken, user: userData } = res.data;
-      setToken(accessToken);
-      setUser(userData);
-      localStorage.setItem('kims_token', accessToken);
-      localStorage.setItem('kims_user', JSON.stringify(userData));
-      return userData;
+      try {
+        const res = await authApi.getMe();
+        if (res.success && res.data) {
+          setUser(res.data);
+          localStorage.setItem('kims_active_user_id', String(res.data.id));
+        } else {
+          setUser(null);
+          localStorage.removeItem('kims_token');
+          localStorage.removeItem('kims_active_user_id');
+        }
+      } catch (err) {
+        console.warn('Session restoration failed or expired:', err.message);
+        setUser(null);
+        localStorage.removeItem('kims_token');
+        localStorage.removeItem('kims_active_user_id');
+      } finally {
+        setLoading(false);
+      }
     }
-    throw new Error(res.error?.message || 'Login failed');
+
+    initAuth();
+  }, []);
+
+  // Login handler
+  const login = async (identifier, password) => {
+    const res = await authApi.login(identifier, password);
+    if (res.success && res.data) {
+      const { accessToken, user: loggedInUser } = res.data;
+      localStorage.setItem('kims_token', accessToken);
+      localStorage.setItem('kims_active_user_id', String(loggedInUser.id));
+      setUser(loggedInUser);
+      return res.data;
+    }
+    throw new Error(res.message || 'Login failed');
   };
 
-  const googleLogin = async (email, name) => {
-    const res = await authApi.googleLogin(email, name);
-    if (res.success && res.data) {
-      const { accessToken, user: userData } = res.data;
-      setToken(accessToken);
-      setUser(userData);
-      localStorage.setItem('kims_token', accessToken);
-      localStorage.setItem('kims_user', JSON.stringify(userData));
-      return userData;
+  // Logout handler
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Ignore network errors on logout
+    } finally {
+      localStorage.removeItem('kims_token');
+      localStorage.removeItem('kims_active_user_id');
+      setUser(null);
     }
-    throw new Error(res.error?.message || 'Google Login failed');
-  };
-
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('kims_token');
-    localStorage.removeItem('kims_user');
-    authApi.logout().catch(() => {});
   };
 
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isAgent = user?.role === 'AGENT';
+  const isEmployee = user?.role === 'EMPLOYEE';
   const isAgentOrAdmin = isAdmin || isAgent;
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
         loading,
         login,
-        googleLogin,
         logout,
         isAdmin,
         isSuperAdmin,
         isAgent,
+        isEmployee,
         isAgentOrAdmin,
       }}
     >

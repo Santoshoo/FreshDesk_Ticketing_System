@@ -12,6 +12,7 @@ import {
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import userApi from '../services/userApi.js';
+import contactApi from '../services/contactApi.js';
 import ticketTypeApi from '../services/ticketTypeApi.js';
 import agentApi from '../services/agentApi.js';
 import groupApi from '../services/groupApi.js';
@@ -94,7 +95,7 @@ export default function CreateTicket() {
     return () => clearTimeout(timer);
   }, [groupSearch]);
 
-  // 2. Search Contacts in User Master (Any logged in user can search and select any contact)
+  // 2. Search Contacts across BOTH User Master and Employee Email Master (Union Search)
   useEffect(() => {
     if (!contactSearch || contactSearch.trim().length < 2) {
       setContactResults([]);
@@ -104,12 +105,12 @@ export default function CreateTicket() {
     const timer = setTimeout(async () => {
       try {
         setSearchingContacts(true);
-        const res = await userApi.search(contactSearch.trim(), 10);
+        const res = await contactApi.search(contactSearch.trim(), 20);
         if (res.success) {
           setContactResults(res.data || []);
         }
       } catch (err) {
-        console.error('Contact search error:', err);
+        console.error('Unified contact search error:', err);
       } finally {
         setSearchingContacts(false);
       }
@@ -169,8 +170,8 @@ export default function CreateTicket() {
   // Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!contactId) {
-      setError('Please select a valid contact from the User Master.');
+    if (!selectedContact) {
+      setError('Please select a valid contact (from User Master or Employee Email Master).');
       showToast('Please select a contact requester.', 'error');
       return;
     }
@@ -200,7 +201,11 @@ export default function CreateTicket() {
       setError('');
 
       const payload = {
-        contactId,
+        contactId: selectedContact.source === 'USER' ? selectedContact.id : null,
+        employeeEmailId: selectedContact.source === 'EMPLOYEE_EMAIL_MASTER' ? selectedContact.id : null,
+        contactSource: selectedContact.source || 'USER',
+        contactEmail: selectedContact.email,
+        contactName: selectedContact.name,
         subject: subject.trim(),
         ticketTypeId: parseInt(ticketTypeId, 10),
         status,
@@ -296,20 +301,30 @@ export default function CreateTicket() {
                 <div className="flex items-center justify-between p-3 bg-blue-50/60 border border-blue-200 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                      {selectedContact.name ? selectedContact.name[0] : 'U'}
+                      {selectedContact.name ? selectedContact.name[0].toUpperCase() : 'U'}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <p className="text-xs font-bold text-slate-800">{selectedContact.name}</p>
-                        {selectedContact.id === user?.id && (
-                          <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded">
+                        {selectedContact.source === 'EMPLOYEE_EMAIL_MASTER' ? (
+                          <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-300">
+                            Employee Email Master
+                          </span>
+                        ) : (
+                          <span className="text-[9px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded border border-blue-300">
+                            User Master
+                          </span>
+                        )}
+                        {selectedContact.id === user?.id && selectedContact.source === 'USER' && (
+                          <span className="text-[9px] bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.5 rounded">
                             You
                           </span>
                         )}
                       </div>
                       <p className="text-[11px] text-slate-500">
-                        {selectedContact.email} • ID: {selectedContact.employeeId || 'N/A'} •{' '}
-                        {selectedContact.department?.name || selectedContact.department || 'Staff'}
+                        {selectedContact.email}
+                        {selectedContact.employeeId ? ` • ID: ${selectedContact.employeeId}` : ''}
+                        {selectedContact.department ? ` • ${selectedContact.department}` : ''}
                       </p>
                     </div>
                   </div>
@@ -320,8 +335,14 @@ export default function CreateTicket() {
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedContact(user);
-                            setContactId(user.id);
+                            setSelectedContact({
+                              id: user.id,
+                              name: user.name,
+                              email: user.email,
+                              employeeId: user.employeeId,
+                              department: user.departmentName || user.department,
+                              source: 'USER',
+                            });
                           }}
                           className="text-xs font-semibold text-blue-600 hover:text-blue-800 bg-white px-2 py-1 rounded border border-blue-200 shadow-2xs transition-colors"
                         >
@@ -332,7 +353,7 @@ export default function CreateTicket() {
                         type="button"
                         onClick={() => {
                           setSelectedContact(null);
-                          setContactId('');
+                          setContactSearch('');
                         }}
                         className="text-xs font-semibold text-rose-600 hover:text-rose-800 bg-white px-2 py-1 rounded border border-rose-200 shadow-2xs transition-colors"
                       >
@@ -349,7 +370,7 @@ export default function CreateTicket() {
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="Search contact by name, email, or employee ID..."
+                      placeholder="Search contact by email, name, or employee ID (searches Users + Employee Emails)..."
                       value={contactSearch}
                       onChange={(e) => setContactSearch(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400"
@@ -358,26 +379,36 @@ export default function CreateTicket() {
 
                   {/* Search Results Dropdown */}
                   {contactResults.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-lg border border-slate-200 max-h-52 overflow-y-auto z-20 divide-y divide-slate-100">
+                    <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-lg border border-slate-200 max-h-56 overflow-y-auto z-20 divide-y divide-slate-100">
                       {contactResults.map((u) => (
                         <div
-                          key={u.id}
+                          key={`${u.source}-${u.id}-${u.email}`}
                           onClick={() => {
                             setSelectedContact(u);
-                            setContactId(u.id);
                             setContactSearch('');
                             setContactResults([]);
                           }}
                           className="p-3 hover:bg-blue-50/50 cursor-pointer transition-colors flex items-center justify-between"
                         >
                           <div>
-                            <p className="text-xs font-semibold text-slate-800">{u.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-semibold text-slate-800">{u.name}</p>
+                              {u.source === 'EMPLOYEE_EMAIL_MASTER' ? (
+                                <span className="text-[9px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.2 rounded border border-emerald-200">
+                                  Employee Email Master
+                                </span>
+                              ) : (
+                                <span className="text-[9px] bg-blue-50 text-blue-700 font-bold px-1.5 py-0.2 rounded border border-blue-200">
+                                  User Master
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-slate-500">
-                              {u.email} • EMP: {u.employeeId}
+                              {u.email} {u.employeeId ? `• EMP: ${u.employeeId}` : ''}
                             </p>
                           </div>
                           <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                            {u.department?.name || 'Staff'}
+                            {u.department || 'General'}
                           </span>
                         </div>
                       ))}
@@ -385,7 +416,9 @@ export default function CreateTicket() {
                   )}
 
                   {searchingContacts && (
-                    <p className="text-[11px] text-slate-400 mt-1">Searching User Master...</p>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Searching User Master and Employee Email Master...
+                    </p>
                   )}
                 </div>
               )}

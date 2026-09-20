@@ -2,13 +2,20 @@ import { prisma } from '../config/database.js';
 import { generateNextTicketNumber } from '../utils/ticketNumber.js';
 import ticketRepository from '../repositories/ticketRepository.js';
 import userRepository from '../repositories/userRepository.js';
+import employeeEmailRepository from '../repositories/employeeEmailRepository.js';
 import groupRepository from '../repositories/groupRepository.js';
 import ticketTypeRepository from '../repositories/ticketTypeRepository.js';
 import agentRepository from '../repositories/agentRepository.js';
+import notificationService from './notificationService.js';
+import logger from '../utils/logger.js';
 
 export class TicketService {
   async createTicket(creatorUser, {
     contactId,
+    contactSource = 'USER',
+    employeeEmailId,
+    contactEmail,
+    contactName,
     subject,
     ticketTypeId,
     status = 'OPEN',
@@ -16,11 +23,6 @@ export class TicketService {
     agentId = null,
     description,
   }) {
-    if (!contactId) {
-      const err = new Error('Contact is required');
-      err.statusCode = 400;
-      throw err;
-    }
     if (!subject || subject.trim() === '') {
       const err = new Error('Subject is required');
       err.statusCode = 400;
@@ -42,22 +44,52 @@ export class TicketService {
       throw err;
     }
 
-    const cleanContactId = parseInt(contactId, 10);
+    // 1. Resolve and validate Contact from either User Master or Employee Email Master
+    let cleanContactId = null;
+    let cleanEmployeeEmailId = null;
+    let resolvedContactEmail = contactEmail || null;
+    let resolvedContactName = contactName || null;
+    let finalContactSource = 'USER';
+
+    if (contactSource === 'EMPLOYEE_EMAIL_MASTER' || (!contactId && employeeEmailId)) {
+      if (!employeeEmailId) {
+        const err = new Error('Contact from Employee Email Master is required');
+        err.statusCode = 400;
+        throw err;
+      }
+      cleanEmployeeEmailId = parseInt(employeeEmailId, 10);
+      const employeeEmail = await employeeEmailRepository.findById(cleanEmployeeEmailId);
+      if (!employeeEmail || !employeeEmail.isActive || employeeEmail.deletedAt !== null) {
+        const err = new Error('Selected contact from Employee Email Master is inactive or no longer exists');
+        err.statusCode = 400;
+        throw err;
+      }
+      finalContactSource = 'EMPLOYEE_EMAIL_MASTER';
+      resolvedContactEmail = employeeEmail.email;
+      resolvedContactName = employeeEmail.email.split('@')[0];
+    } else {
+      if (!contactId) {
+        const err = new Error('Contact requester is required');
+        err.statusCode = 400;
+        throw err;
+      }
+      cleanContactId = parseInt(contactId, 10);
+      const contact = await userRepository.findById(cleanContactId);
+      if (!contact || contact.status !== 'ACTIVE') {
+        const err = new Error('Selected contact not found in User Master or is inactive');
+        err.statusCode = 400;
+        throw err;
+      }
+      finalContactSource = 'USER';
+      resolvedContactEmail = contact.email;
+      resolvedContactName = contact.name;
+    }
+
     const cleanTicketTypeId = parseInt(ticketTypeId, 10);
     const cleanGroupId = parseInt(groupId, 10);
     const cleanAgentId = agentId ? parseInt(agentId, 10) : null;
 
-    // Validate Contact
-    const contact = await userRepository.findById(cleanContactId);
-    if (!contact) {
-      const err = new Error('Selected contact not found in User Master');
-      err.statusCode = 400;
-      throw err;
-    }
-
-    // Contact verified in User Master
-
-    // Validate Ticket Type
+    // 2. Validate Ticket Type
     const ticketType = await ticketTypeRepository.findById(cleanTicketTypeId);
     if (!ticketType || ticketType.status !== 'ACTIVE') {
       const err = new Error('Selected ticket type is invalid or inactive');
@@ -65,7 +97,7 @@ export class TicketService {
       throw err;
     }
 
-    // Validate Group
+    // 3. Validate Group
     const group = await groupRepository.findById(cleanGroupId);
     if (!group || group.status !== 'ACTIVE') {
       const err = new Error('Selected group is invalid or inactive');
@@ -73,7 +105,7 @@ export class TicketService {
       throw err;
     }
 
-    // Validate Selected Agent belongs to Group
+    // 4. Validate Selected Agent belongs to Group
     if (cleanAgentId) {
       const isAgentInGroup = await agentRepository.isUserInGroup(cleanAgentId, cleanGroupId);
       if (!isAgentInGroup) {
@@ -87,13 +119,17 @@ export class TicketService {
     const finalStatus = allowedStatuses.includes(status) ? status : 'OPEN';
 
     // Atomic Database Transaction
-    return prisma.$transaction(async (tx) => {
+    const createdTicket = await prisma.$transaction(async (tx) => {
       const ticketNumber = await generateNextTicketNumber(tx);
 
       const ticket = await tx.ticket.create({
         data: {
           ticketNumber,
           contactId: cleanContactId,
+          employeeEmailId: cleanEmployeeEmailId,
+          contactSource: finalContactSource,
+          contactEmail: resolvedContactEmail,
+          contactName: resolvedContactName,
           subject: subject.trim(),
           ticketTypeId: cleanTicketTypeId,
           status: finalStatus,
@@ -135,22 +171,39 @@ export class TicketService {
 
       return ticket;
     });
+
+    // TRIGGER TICKET CREATED NOTIFICATIONS (Requirements 2, 13, 14, 20):
+    // Sent asynchronously strictly AFTER successful DB transaction commit
+    notificationService.sendTicketCreatedNotifications(createdTicket.id).catch((err) => {
+      logger.error({
+        msg: 'Background ticket created notification error',
+        ticketId: String(createdTicket.id),
+        error: err.message,
+      });
+    });
+
+    return createdTicket;
   }
 
-  async listTickets(user, { page = 1, limit = 50, search = '', status = '', groupId = '', agentId = '', scope = 'all' } = {}) {
-    const skip = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
-    const take = Math.min(100, Math.max(1, parseInt(limit, 10)));
+  async listTickets(user, { page = 1, limit = 20, search = '', status = '', groupId = '', agentId = '', scope = 'all' } = {}) {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const take = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = (pageNum - 1) * take;
 
     const where = {};
 
-    if (search) {
+    if (search && search.trim()) {
       const cleanSearch = search.replace(/^#/, '').trim();
       where.OR = [
         { ticketNumber: { contains: cleanSearch } },
-        { subject: { contains: search.trim() } },
-        { contact: { name: { contains: search.trim() } } },
-        { contact: { email: { contains: search.trim() } } },
-        { contact: { employeeId: { contains: search.trim() } } },
+        { subject: { contains: cleanSearch } },
+        { contactEmail: { contains: cleanSearch } },
+        { contactName: { contains: cleanSearch } },
+        { contact: { name: { contains: cleanSearch } } },
+        { contact: { email: { contains: cleanSearch } } },
+        { contact: { employeeId: { contains: cleanSearch } } },
+        { employeeEmail: { email: { contains: cleanSearch } } },
+        { employeeEmail: { normalizedEmail: { contains: cleanSearch } } },
       ];
     }
 
@@ -187,10 +240,11 @@ export class TicketService {
     return {
       tickets,
       pagination: {
-        page: parseInt(page, 10),
+        page: pageNum,
+        pageSize: take,
         limit: take,
         total,
-        totalPages: Math.ceil(total / take),
+        totalPages: Math.ceil(total / take) || 1,
       },
     };
   }
@@ -220,29 +274,41 @@ export class TicketService {
       throw err;
     }
 
-    // Role check: Agents, Admins, Super Admins can access update
+    // Role check: Employees cannot edit tickets
     if (user.role === 'EMPLOYEE') {
       const err = new Error('Forbidden: Only support agents and administrators can modify ticket records');
       err.statusCode = 403;
       throw err;
     }
 
-    // Agent constraint: Agents can ONLY modify ticket status, not subject, description, type, or assignment
-    if (user.role === 'AGENT' && (subject || description || ticketTypeId || groupId || agentId !== undefined)) {
-      const err = new Error('Forbidden: Support Agents are only authorized to update ticket status. Other ticket modifications require Administrator privileges.');
-      err.statusCode = 403;
-      throw err;
+    // TICKET EDIT BUSINESS RULE (Requirements 7, 8, 9):
+    // Ticket is editable when status = OPEN or status = PENDING.
+    // When ticket status = CLOSED, editing content is rejected unless explicitly reopening to OPEN or PENDING.
+    if (ticket.status === 'CLOSED') {
+      if (status === 'OPEN' || status === 'PENDING') {
+        // Explicitly reopening ticket to OPEN or PENDING is allowed
+      } else {
+        const err = new Error('Cannot edit a closed ticket. Please reopen the ticket first to OPEN or PENDING.');
+        err.statusCode = 400;
+        throw err;
+      }
+    } else if (ticket.status !== 'OPEN' && ticket.status !== 'PENDING') {
+      if (status === 'OPEN' || status === 'PENDING') {
+        // Switching back to OPEN or PENDING is allowed
+      } else {
+        const err = new Error('Ticket can only be edited when status is OPEN or PENDING.');
+        err.statusCode = 400;
+        throw err;
+      }
     }
 
     const updateData = {};
-    if (user.role !== 'AGENT') {
-      if (subject) updateData.subject = subject.trim();
-      if (description) updateData.description = description.trim();
-      if (ticketTypeId) updateData.ticketTypeId = parseInt(ticketTypeId, 10);
-      if (groupId) updateData.groupId = parseInt(groupId, 10);
-      if (agentId !== undefined) {
-        updateData.agentId = agentId ? parseInt(agentId, 10) : null;
-      }
+    if (subject) updateData.subject = subject.trim();
+    if (description) updateData.description = description.trim();
+    if (ticketTypeId) updateData.ticketTypeId = parseInt(ticketTypeId, 10);
+    if (groupId) updateData.groupId = parseInt(groupId, 10);
+    if (agentId !== undefined) {
+      updateData.agentId = agentId ? parseInt(agentId, 10) : null;
     }
 
     if (status) {
@@ -254,7 +320,22 @@ export class TicketService {
       }
     }
 
-    return ticketRepository.updateTicket(ticketId, updateData);
+    const previousStatus = ticket.status;
+    const updated = await ticketRepository.updateTicket(ticketId, updateData);
+
+    // TRIGGER TICKET CLOSED NOTIFICATIONS (Requirements 3, 14, 21):
+    // Only when status actually transitions to CLOSED from another status
+    if (updateData.status === 'CLOSED' && previousStatus !== 'CLOSED') {
+      notificationService.sendTicketClosedNotifications(ticketId).catch((err) => {
+        logger.error({
+          msg: 'Background ticket closed notification error from updateTicket',
+          ticketId: String(ticketId),
+          error: err.message,
+        });
+      });
+    }
+
+    return updated;
   }
 
   async deleteTicket(user, ticketId) {
@@ -265,14 +346,15 @@ export class TicketService {
       throw err;
     }
 
-    // Role rules:
-    // Super Admin & Admin can delete any ticket.
-    // Agent can ONLY delete tickets created by them!
+    // TICKET DELETE BUSINESS RULE (Requirements 10, 11, 12):
+    // Only the AGENT currently assigned to that ticket can delete the ticket (ticket.agentId === user.id).
+    // SUPER_ADMIN and ADMIN retain their delete permissions.
+    // EMPLOYEE cannot delete tickets.
     const isSuperOrAdmin = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
-    const isOwnerAgent = user.role === 'AGENT' && ticket.createdBy === user.id;
+    const isAssignedAgent = user.role === 'AGENT' && ticket.agentId === user.id;
 
-    if (!isSuperOrAdmin && !isOwnerAgent) {
-      const err = new Error('Forbidden: You can only delete tickets that were created by you.');
+    if (!isSuperOrAdmin && !isAssignedAgent) {
+      const err = new Error('Forbidden: Only the support agent currently assigned to this ticket can delete it');
       err.statusCode = 403;
       throw err;
     }
@@ -329,12 +411,27 @@ export class TicketService {
       throw err;
     }
 
-    return ticketRepository.updateStatus({
+    const previousStatus = ticket.status;
+    const updated = await ticketRepository.updateStatus({
       ticketId,
       newStatus,
       changedBy: user.id,
-      oldStatus: ticket.status,
+      oldStatus: previousStatus,
     });
+
+    // TRIGGER TICKET CLOSED NOTIFICATIONS (Requirements 3, 14, 21):
+    // Only when status actually transitions to CLOSED from another status
+    if (newStatus === 'CLOSED' && previousStatus !== 'CLOSED') {
+      notificationService.sendTicketClosedNotifications(ticketId).catch((err) => {
+        logger.error({
+          msg: 'Background ticket closed notification error from updateStatus',
+          ticketId: String(ticketId),
+          error: err.message,
+        });
+      });
+    }
+
+    return updated;
   }
 
   async updateAssignment(user, ticketId, { groupId, agentId }) {

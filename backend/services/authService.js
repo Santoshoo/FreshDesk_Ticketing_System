@@ -43,6 +43,15 @@ export class AuthService {
       throw err;
     }
 
+    // Role check: Only SUPER_ADMIN, ADMIN, and AGENT are authorized to log in
+    const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'AGENT'];
+    const userRole = user.role?.name;
+    if (!allowedRoles.includes(userRole)) {
+      const err = new Error('Access denied: Only Super Admin, Admin, and Support Agents are authorized to log in.');
+      err.statusCode = 403;
+      throw err;
+    }
+
     const accessToken = jwt.sign(
       {
         userId: user.id,

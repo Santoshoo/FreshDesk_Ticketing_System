@@ -20,6 +20,7 @@ import ticketApi from '../services/ticketApi.js';
 import groupApi from '../services/groupApi.js';
 import ticketTypeApi from '../services/ticketTypeApi.js';
 import { Modal, EmptyState } from '../components/ui/index.jsx';
+import { canEditTicket, canDeleteTicket } from '../utils/ticketPermissions.js';
 
 export default function Tickets({ isMyScope = false }) {
   const navigate = useNavigate();
@@ -163,16 +164,6 @@ export default function Tickets({ isMyScope = false }) {
     } finally {
       setEditLoading(false);
     }
-  };
-
-  // Check Delete Permission:
-  // Super Admin & Admin can delete any ticket.
-  // Agent can ONLY delete tickets created by themselves (createdBy === user.id).
-  const canDeleteTicket = (t) => {
-    if (!user) return false;
-    if (isAdmin) return true;
-    if (user.role === 'AGENT' && t.createdBy === user.id) return true;
-    return false;
   };
 
   // Open Delete Confirmation
@@ -420,7 +411,7 @@ export default function Tickets({ isMyScope = false }) {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex items-center justify-end gap-1.5">
-                            {isAdmin && (
+                            {canEditTicket(t, user) && (
                               <button
                                 onClick={(e) => openEditModal(e, t)}
                                 className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -430,7 +421,7 @@ export default function Tickets({ isMyScope = false }) {
                               </button>
                             )}
 
-                            {canDelete && (
+                            {canDeleteTicket(t, user) && (
                               <button
                                 onClick={(e) => openDeleteModal(e, t)}
                                 className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
@@ -587,11 +578,11 @@ export default function Tickets({ isMyScope = false }) {
       <Modal
         isOpen={Boolean(ticketToDelete)}
         onClose={() => setTicketToDelete(null)}
-        title="Confirm Delete Ticket"
+        title="Confirm Delete"
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-600">
-            Are you sure you want to permanently delete Ticket{' '}
+            Are you sure you want to delete Ticket{' '}
             <strong className="text-slate-900">#{ticketToDelete?.ticketNumber}</strong> ({ticketToDelete?.subject})?
           </p>
           <p className="text-[11px] text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
@@ -602,9 +593,9 @@ export default function Tickets({ isMyScope = false }) {
             <button
               type="button"
               onClick={() => setTicketToDelete(null)}
-              className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
             >
-              Cancel
+              No
             </button>
             <button
               type="button"
@@ -612,7 +603,7 @@ export default function Tickets({ isMyScope = false }) {
               onClick={handleConfirmDelete}
               className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50"
             >
-              {deleteLoading ? 'Deleting...' : 'Delete Ticket'}
+              {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
             </button>
           </div>
         </div>

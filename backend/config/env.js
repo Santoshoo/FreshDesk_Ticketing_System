@@ -17,6 +17,15 @@ export const config = {
     redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/v1/auth/google/callback',
   },
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'http://localhost:5173',
+  smtp: {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    user: process.env.SMTP_USER || 'eus@kims.ac.in',
+    password: process.env.SMTP_PASSWORD || '',
+    secure: process.env.SMTP_SECURE === 'true',
+    from: process.env.MAIL_FROM || 'KIMS ICT Service Desk <eus@kims.ac.in>',
+  },
 };
 
 export default config;

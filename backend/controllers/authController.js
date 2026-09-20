@@ -4,8 +4,9 @@ import { config } from '../config/env.js';
 export class AuthController {
   async login(req, res, next) {
     try {
-      const { email, password } = req.body;
-      const result = await authService.login(email, password);
+      const { email, password, emailOrEmployeeId, username, identifier } = req.body;
+      const loginIdentifier = email || emailOrEmployeeId || username || identifier;
+      const result = await authService.login(loginIdentifier, password);
       res.json({
         success: true,
         data: result,

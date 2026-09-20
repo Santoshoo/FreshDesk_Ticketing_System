@@ -123,6 +123,36 @@ export class UserRepository {
     });
   }
 
+  async searchActiveUsers(query, limit = 20) {
+    const clean = (query || '').trim();
+    const where = {
+      status: 'ACTIVE',
+    };
+
+    if (clean) {
+      where.OR = [
+        { name: { contains: clean } },
+        { email: { contains: clean } },
+        { employeeId: { contains: clean } },
+      ];
+    }
+
+    return prisma.user.findMany({
+      where,
+      take: Math.min(50, Math.max(1, limit)),
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        employeeId: true,
+        department: {
+          select: { id: true, name: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
   async findRoles() {
     return prisma.role.findMany({
       orderBy: { id: 'asc' },

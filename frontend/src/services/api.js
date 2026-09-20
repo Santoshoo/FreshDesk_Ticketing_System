@@ -7,27 +7,30 @@ const api = axios.create({
   },
 });
 
-// Request interceptor: attach bearer token
+// Request interceptor: attach Bearer token and internal user context
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('kims_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    const activeUserId = localStorage.getItem('kims_active_user_id');
+    if (activeUserId) {
+      config.headers['x-user-id'] = activeUserId;
+    }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle 401 token expiry
+// Response interceptor: handle 401 Unauthorized
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const currentPath = window.location.pathname;
-      if (currentPath !== '/login') {
-        localStorage.removeItem('kims_token');
-        localStorage.removeItem('kims_user');
+      localStorage.removeItem('kims_token');
+      localStorage.removeItem('kims_active_user_id');
+      if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }

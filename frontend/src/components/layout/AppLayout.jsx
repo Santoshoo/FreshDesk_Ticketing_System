@@ -19,7 +19,7 @@ export default function AppLayout() {
     );
   }
 
-  if (!user) {
+  if (!user && !loading) {
     return <Navigate to="/login" replace />;
   }
 

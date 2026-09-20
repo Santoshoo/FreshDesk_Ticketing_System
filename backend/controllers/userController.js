@@ -1,4 +1,5 @@
 import userService from '../services/userService.js';
+import userRepository from '../repositories/userRepository.js';
 
 export class UserController {
   async list(req, res, next) {
@@ -43,6 +44,39 @@ export class UserController {
     try {
       const user = await userService.updateUser(req.params.id, req.body);
       res.json({ success: true, data: user });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getMe(req, res, next) {
+    try {
+      res.json({
+        success: true,
+        data: req.user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getActiveUsers(req, res, next) {
+    try {
+      const users = await userRepository.findMany({
+        where: { status: 'ACTIVE' },
+        take: 100,
+      });
+      res.json({
+        success: true,
+        data: users.map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role?.name,
+          department: u.department?.name,
+          departmentId: u.departmentId,
+        })),
+      });
     } catch (error) {
       next(error);
     }

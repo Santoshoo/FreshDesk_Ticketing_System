@@ -25,6 +25,7 @@ import ticketApi from '../services/ticketApi.js';
 import groupApi from '../services/groupApi.js';
 import ticketTypeApi from '../services/ticketTypeApi.js';
 import { StatusBadge, Card, CardHeader, CardTitle, CardContent, Modal } from '../components/ui/index.jsx';
+import { canEditTicket, canDeleteTicket } from '../utils/ticketPermissions.js';
 
 export default function TicketDetails() {
   const { id } = useParams();
@@ -205,16 +206,6 @@ export default function TicketDetails() {
     }
   };
 
-  // Check Delete Permission:
-  // Super Admin & Admin can delete any ticket.
-  // Agent can ONLY delete tickets created by themselves (createdBy === user.id).
-  const canDeleteTicket = () => {
-    if (!user || !ticket) return false;
-    if (isAdmin) return true;
-    if (user.role === 'AGENT' && ticket.createdBy === user.id) return true;
-    return false;
-  };
-
   // Confirm Delete
   const handleConfirmDelete = async () => {
     try {
@@ -316,7 +307,7 @@ export default function TicketDetails() {
         <div className="flex items-center gap-2 self-end sm:self-center">
           <StatusBadge status={ticket.status} />
 
-          {isAdmin && (
+          {canEditTicket(ticket, user) && (
             <button
               onClick={openEditModal}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
@@ -326,7 +317,7 @@ export default function TicketDetails() {
             </button>
           )}
 
-          {canDeleteTicket() && (
+          {canDeleteTicket(ticket, user) && (
             <button
               onClick={() => setIsDeleteModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
@@ -570,29 +561,64 @@ export default function TicketDetails() {
             <CardContent className="pt-4 space-y-4">
               {/* Quick Status Select */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                  Ticket Status
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-semibold text-slate-600">
+                    Ticket Status
+                  </label>
+                  {selectedStatus !== ticket.status && (
+                    <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1">
+                      ● Unsaved
+                    </span>
+                  )}
+                </div>
                 {isAgentOrAdmin ? (
-                  <select
-                    value={selectedStatus}
-                    disabled={updatingStatus}
-                    onChange={(e) => handleStatusChange(e.target.value)}
-                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium"
-                  >
-                    <option value="OPEN">Open</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="PENDING">Pending</option>
-                    <option value="ON_HOLD">On Hold</option>
-                    <option value="RESOLVED">Resolved</option>
-                    <option value="CLOSED">Closed</option>
-                  </select>
+                  <div className="space-y-2">
+                    <select
+                      value={selectedStatus}
+                      disabled={updatingStatus}
+                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium"
+                    >
+                      <option value="OPEN">Open</option>
+                      <option value="IN_PROGRESS">In Progress</option>
+                      <option value="PENDING">Pending</option>
+                      <option value="ON_HOLD">On Hold</option>
+                      <option value="RESOLVED">Resolved</option>
+                      <option value="CLOSED">Closed</option>
+                    </select>
+
+                    {selectedStatus !== ticket.status && (
+                      <button
+                        type="button"
+                        disabled={updatingStatus}
+                        onClick={() => handleStatusChange(selectedStatus)}
+                        className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-2xs transition-colors disabled:opacity-50"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>{updatingStatus ? 'Updating Status...' : 'Save Status Change'}</span>
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="mt-1">
                     <StatusBadge status={ticket.status} />
                   </div>
                 )}
               </div>
+
+              {/* Reopen helper if ticket is CLOSED */}
+              {ticket.status === 'CLOSED' && isAgentOrAdmin && (
+                <div className="p-2.5 bg-amber-50 rounded-lg border border-amber-200 text-xs">
+                  <p className="text-amber-800 font-medium mb-1.5">This ticket is currently Closed.</p>
+                  <button
+                    onClick={() => handleStatusChange('OPEN')}
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-1 px-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-md text-[11px] font-semibold transition-colors"
+                  >
+                    <CheckCircle2 className="w-3 h-3" />
+                    <span>Reopen Ticket (Sets to OPEN)</span>
+                  </button>
+                </div>
+              )}
 
               {/* Assignment Control for Agents/Admins */}
               {isAgentOrAdmin ? (
@@ -634,11 +660,12 @@ export default function TicketDetails() {
 
                   <button
                     type="button"
-                    disabled={updatingAssignment}
+                    disabled={updatingAssignment || (selectedGroupId === String(ticket.groupId) && (selectedAgentId || '') === String(ticket.agentId || ''))}
                     onClick={handleAssignmentChange}
-                    className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+                    className="w-full inline-flex items-center justify-center gap-1.5 py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 shadow-2xs"
                   >
-                    {updatingAssignment ? 'Reassigning...' : 'Update Assignment'}
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>{updatingAssignment ? 'Reassigning...' : 'Save Assignment'}</span>
                   </button>
                 </div>
               ) : (
@@ -768,11 +795,11 @@ export default function TicketDetails() {
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
-        title={`Confirm Delete Ticket #${ticket?.ticketNumber}`}
+        title="Confirm Delete"
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-600">
-            Are you sure you want to permanently delete Ticket{' '}
+            Are you sure you want to delete Ticket{' '}
             <strong className="text-slate-900">#{ticket?.ticketNumber}</strong> ({ticket?.subject})?
           </p>
           <p className="text-[11px] text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-200">
@@ -783,9 +810,9 @@ export default function TicketDetails() {
             <button
               type="button"
               onClick={() => setIsDeleteModalOpen(false)}
-              className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg"
+              className="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg font-medium"
             >
-              Cancel
+              No
             </button>
             <button
               type="button"
@@ -793,7 +820,7 @@ export default function TicketDetails() {
               onClick={handleConfirmDelete}
               className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold disabled:opacity-50"
             >
-              {deleteLoading ? 'Deleting...' : 'Delete Ticket'}
+              {deleteLoading ? 'Deleting...' : 'Yes, Delete'}
             </button>
           </div>
         </div>

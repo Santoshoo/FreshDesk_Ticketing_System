@@ -30,6 +30,16 @@ export const userApi = {
     const res = await api.get('/users/roles');
     return res.data;
   },
+
+  getMe: async () => {
+    const res = await api.get('/users/me');
+    return res.data;
+  },
+
+  getActiveContext: async () => {
+    const res = await api.get('/users/active-context');
+    return res.data;
+  },
 };
 
 export default userApi;

@@ -13,6 +13,8 @@ import ticketTypeRoutes from './routes/ticketTypeRoutes.js';
 import tagRoutes from './routes/tagRoutes.js';
 import ticketRoutes from './routes/ticketRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import employeeEmailRoutes from './routes/employeeEmailRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
 
 const app = express();
 
@@ -45,6 +47,8 @@ app.use('/api/v1/ticket-types', ticketTypeRoutes);
 app.use('/api/v1/tags', tagRoutes);
 app.use('/api/v1/tickets', ticketRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/employee-emails', employeeEmailRoutes);
+app.use('/api/v1/contacts', contactRoutes);
 
 // Fallback for unmatched routes
 app.use((req, res) => {

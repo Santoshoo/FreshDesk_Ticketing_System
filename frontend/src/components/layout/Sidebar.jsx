@@ -15,6 +15,7 @@ import {
   Tags,
   LogOut,
   HelpCircle,
+  Mail,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -120,6 +121,11 @@ export default function Sidebar({ isOpen, onClose }) {
                   <span>Users</span>
                 </NavLink>
 
+                <NavLink to="/admin/employee-emails" className={navClass} onClick={onClose}>
+                  <Mail className="w-4 h-4" />
+                  <span>Employee Email Master</span>
+                </NavLink>
+
                 <NavLink to="/admin/departments" className={navClass} onClick={onClose}>
                   <Building2 className="w-4 h-4" />
                   <span>Departments</span>
@@ -162,10 +168,10 @@ export default function Sidebar({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* User Account Footer */}
+        {/* User Account Footer with Logout Button */}
         <div className="p-3 border-t border-slate-800/80 bg-[#0d1624]">
-          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/50 transition-colors">
-            <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/40 border border-slate-800/80">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
               <div className="w-9 h-9 rounded-full bg-blue-600/30 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold text-xs shrink-0">
                 {user?.name
                   ? user.name
@@ -183,11 +189,10 @@ export default function Sidebar({ isOpen, onClose }) {
                 </span>
               </div>
             </div>
-
             <button
               onClick={handleLogout}
-              title="Logout"
-              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors"
+              title="Sign Out"
+              className="flex items-center justify-center p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all shrink-0 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>
