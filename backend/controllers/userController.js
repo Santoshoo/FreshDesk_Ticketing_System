@@ -90,6 +90,15 @@ export class UserController {
       next(error);
     }
   }
+
+  async delete(req, res, next) {
+    try {
+      await userService.deleteUser(req.params.id);
+      res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new UserController();

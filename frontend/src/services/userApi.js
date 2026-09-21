@@ -26,6 +26,11 @@ export const userApi = {
     return res.data;
   },
 
+  delete: async (id) => {
+    const res = await api.delete(`/users/${id}`);
+    return res.data;
+  },
+
   getRoles: async () => {
     const res = await api.get('/users/roles');
     return res.data;

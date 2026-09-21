@@ -75,13 +75,7 @@ export class EmployeeEmailService {
 
     const normalizedEmail = trimmedEmail.toLowerCase();
 
-    // 1. Check if email already exists in User Master
-    const existingUser = await userRepository.findByEmail(normalizedEmail);
-    if (existingUser) {
-      const err = new Error('The email is already registered in the system (already exists in User Master)');
-      err.statusCode = 409;
-      throw err;
-    }
+
 
     // 2. Check if email already exists in Employee Email Master (active or non-deleted)
     const existingEmail = await employeeEmailRepository.findByNormalizedEmail(normalizedEmail);

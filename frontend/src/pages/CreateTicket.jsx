@@ -323,8 +323,6 @@ export default function CreateTicket() {
                       </div>
                       <p className="text-[11px] text-slate-500">
                         {selectedContact.email}
-                        {selectedContact.employeeId ? ` • ID: ${selectedContact.employeeId}` : ''}
-                        {selectedContact.department ? ` • ${selectedContact.department}` : ''}
                       </p>
                     </div>
                   </div>
@@ -370,7 +368,7 @@ export default function CreateTicket() {
                     <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      placeholder="Search contact by email, name, or employee ID (searches Users + Employee Emails)..."
+                      placeholder="Search contact by name or email (searches Users + Employee Emails)..."
                       value={contactSearch}
                       onChange={(e) => setContactSearch(e.target.value)}
                       className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400"
@@ -404,12 +402,9 @@ export default function CreateTicket() {
                               )}
                             </div>
                             <p className="text-[11px] text-slate-500">
-                              {u.email} {u.employeeId ? `• EMP: ${u.employeeId}` : ''}
+                              {u.email}
                             </p>
                           </div>
-                          <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                            {u.department || 'General'}
-                          </span>
                         </div>
                       ))}
                     </div>

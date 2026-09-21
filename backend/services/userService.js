@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import userRepository from '../repositories/userRepository.js';
+import employeeEmailRepository from '../repositories/employeeEmailRepository.js';
 
 export class UserService {
   async listUsers({ page = 1, limit = 50, search = '', role = '', departmentId = null } = {}) {
@@ -61,6 +62,10 @@ export class UserService {
       throw err;
     }
 
+    const cleanEmail = email.trim();
+    const normalizedEmail = cleanEmail.toLowerCase();
+    const cleanDeptId = departmentId ? parseInt(departmentId, 10) : null;
+
     let finalRoleId = roleId ? parseInt(roleId, 10) : null;
     if (!finalRoleId && roleName) {
       const roleObj = await userRepository.findRoleByName(roleName);
@@ -74,16 +79,39 @@ export class UserService {
     const initialPassword = password || 'Kims@123';
     const passwordHash = await bcrypt.hash(initialPassword, 10);
 
-    return userRepository.create({
+    const createdUser = await userRepository.create({
       name: name.trim(),
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       employeeId: employeeId.trim().toUpperCase(),
       mobile: mobile ? mobile.trim() : null,
-      departmentId: departmentId ? parseInt(departmentId, 10) : null,
+      departmentId: cleanDeptId,
       roleId: finalRoleId,
       passwordHash,
       status: status || 'ACTIVE',
     });
+
+    // Auto-create/sync email in Employee Email Master so all user emails exist in Employee Email Master
+    try {
+      const existingEmpEmail = await employeeEmailRepository.findByNormalizedEmail(normalizedEmail, { includeDeleted: true });
+      if (!existingEmpEmail) {
+        await employeeEmailRepository.create({
+          email: cleanEmail,
+          normalizedEmail,
+          departmentId: cleanDeptId,
+          isActive: true,
+        });
+      } else if (existingEmpEmail.deletedAt !== null || !existingEmpEmail.isActive) {
+        await employeeEmailRepository.update(existingEmpEmail.id, {
+          deletedAt: null,
+          isActive: true,
+          departmentId: cleanDeptId || existingEmpEmail.departmentId,
+        });
+      }
+    } catch (syncErr) {
+      console.warn('Syncing user email to Employee Email Master warning:', syncErr.message);
+    }
+
+    return createdUser;
   }
 
   async updateUser(id, { name, email, employeeId, mobile, departmentId, roleId, roleName, password, status }) {
@@ -95,11 +123,13 @@ export class UserService {
     }
 
     const updateData = {};
+    const cleanDeptId = departmentId !== undefined ? (departmentId ? parseInt(departmentId, 10) : null) : existing.departmentId;
+
     if (name !== undefined) updateData.name = name.trim();
     if (email !== undefined) updateData.email = email.trim().toLowerCase();
     if (employeeId !== undefined) updateData.employeeId = employeeId.trim().toUpperCase();
     if (mobile !== undefined) updateData.mobile = mobile ? mobile.trim() : null;
-    if (departmentId !== undefined) updateData.departmentId = departmentId ? parseInt(departmentId, 10) : null;
+    if (departmentId !== undefined) updateData.departmentId = cleanDeptId;
     if (status !== undefined) updateData.status = status;
 
     if (roleId) {
@@ -113,11 +143,48 @@ export class UserService {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
-    return userRepository.update(parseInt(id, 10), updateData);
+    const updatedUser = await userRepository.update(parseInt(id, 10), updateData);
+
+    if (updateData.email) {
+      try {
+        const cleanEmail = updateData.email;
+        const normalizedEmail = cleanEmail.toLowerCase();
+        const existingEmpEmail = await employeeEmailRepository.findByNormalizedEmail(normalizedEmail, { includeDeleted: true });
+        if (!existingEmpEmail) {
+          await employeeEmailRepository.create({
+            email: cleanEmail,
+            normalizedEmail,
+            departmentId: cleanDeptId,
+            isActive: true,
+          });
+        } else if (existingEmpEmail.deletedAt !== null || !existingEmpEmail.isActive) {
+          await employeeEmailRepository.update(existingEmpEmail.id, {
+            deletedAt: null,
+            isActive: true,
+            departmentId: cleanDeptId || existingEmpEmail.departmentId,
+          });
+        }
+      } catch (syncErr) {
+        console.warn('Syncing user email to Employee Email Master warning:', syncErr.message);
+      }
+    }
+
+    return updatedUser;
   }
 
   async getRoles() {
     return userRepository.findRoles();
+  }
+
+  async deleteUser(id) {
+    const userId = parseInt(id, 10);
+    const existing = await userRepository.findById(userId);
+    if (!existing) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+    return userRepository.deleteUser(userId);
   }
 }
 

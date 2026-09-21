@@ -11,11 +11,7 @@ export const config = {
     accessExpiry: process.env.JWT_ACCESS_EXPIRY || '1d',
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
   },
-  google: {
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/v1/auth/google/callback',
-  },
+
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   frontendBaseUrl: process.env.FRONTEND_BASE_URL || 'http://localhost:5173',
   smtp: {

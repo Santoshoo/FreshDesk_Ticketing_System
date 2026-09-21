@@ -6,15 +6,6 @@ export const authApi = {
     return res.data;
   },
 
-  getGoogleUrl: async () => {
-    const res = await api.get('/auth/google/url');
-    return res.data;
-  },
-
-  googleLogin: async (email, name) => {
-    const res = await api.post('/auth/google', { email, name });
-    return res.data;
-  },
 
   getMe: async () => {
     const res = await api.get('/auth/me');

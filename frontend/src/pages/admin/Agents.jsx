@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { UserCheck, Search, Check, FolderKanban, AlertCircle, Shield } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { UserCheck, Search, Check, FolderKanban, AlertCircle, Shield, MoreVertical } from 'lucide-react';
 import agentApi from '../../services/agentApi.js';
 import userApi from '../../services/userApi.js';
 import groupApi from '../../services/groupApi.js';
@@ -11,6 +11,19 @@ export default function Agents() {
   const [allGroups, setAllGroups] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
+  const dropdownRef = useRef(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setActiveDropdownId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Modal State for assigning groups to an agent/user
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -113,7 +126,7 @@ export default function Agents() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-visible" ref={dropdownRef}>
         {loading ? (
           <div className="py-16 text-center">
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
@@ -126,7 +139,7 @@ export default function Agents() {
             description="No users have been configured as support agents yet. Click Configure Agent to assign groups to a user."
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-visible">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/60">
                 <tr>
@@ -165,13 +178,58 @@ export default function Agents() {
                         <span className="text-slate-400 italic text-[11px]">No groups assigned</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-right">
+                    <td className="px-5 py-3.5 text-right relative">
                       <button
-                        onClick={() => openConfigModal(a)}
-                        className="px-2.5 py-1 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveDropdownId(activeDropdownId === a.id ? null : a.id);
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors inline-flex items-center justify-center"
+                        title="Actions"
                       >
-                        Manage Groups
+                        <MoreVertical className="w-4 h-4" />
                       </button>
+
+                      {activeDropdownId === a.id && (
+                        <div className="absolute right-5 top-10 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-30 text-left divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                          <div className="py-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveDropdownId(null);
+                                openConfigModal(a);
+                              }}
+                              className="w-full px-3.5 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2.5 transition-colors"
+                            >
+                              <FolderKanban className="w-3.5 h-3.5 text-blue-500" />
+                              <span>Assign Groups</span>
+                            </button>
+                          </div>
+                          {a.groups && a.groups.length > 0 && (
+                            <div className="py-1">
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  setActiveDropdownId(null);
+                                  if (window.confirm(`Remove all assigned groups for ${a.name}?`)) {
+                                    try {
+                                      await agentApi.updateAgentGroups(a.id, [], false);
+                                      fetchData();
+                                    } catch (err) {
+                                      alert(err.response?.data?.error?.message || err.message);
+                                    }
+                                  }
+                                }}
+                                className="w-full px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors"
+                              >
+                                <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
+                                <span>Clear Groups</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -229,10 +287,31 @@ export default function Agents() {
           </div>
 
           {/* Group Checklist (Supports 1, 2, 7, 20... any number of groups) */}
+          {/* Group Checklist with Select All Checkbox */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">
-              Assigned Groups ({selectedGroupIds.length} selected)
-            </label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                Assigned Groups ({selectedGroupIds.length} of {allGroups.length} selected)
+              </label>
+
+              {allGroups.length > 0 && (
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors select-none">
+                  <input
+                    type="checkbox"
+                    checked={allGroups.length > 0 && selectedGroupIds.length === allGroups.length}
+                    onChange={() => {
+                      if (selectedGroupIds.length === allGroups.length) {
+                        setSelectedGroupIds([]);
+                      } else {
+                        setSelectedGroupIds(allGroups.map((g) => g.id));
+                      }
+                    }}
+                    className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span>Select All</span>
+                </label>
+              )}
+            </div>
 
             {allGroups.length === 0 ? (
               <p className="text-xs text-amber-600">
@@ -254,7 +333,7 @@ export default function Agents() {
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleGroup(group.id)}
-                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                          className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
                         />
                         <div>
                           <p className="text-xs font-semibold text-slate-800">{group.name}</p>

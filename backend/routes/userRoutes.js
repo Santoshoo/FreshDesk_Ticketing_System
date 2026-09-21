@@ -15,5 +15,6 @@ router.get('/', isAdmin, userController.list.bind(userController));
 router.post('/', isAdmin, userController.create.bind(userController));
 router.get('/:id', userController.getById.bind(userController));
 router.put('/:id', isAdmin, userController.update.bind(userController));
+router.delete('/:id', isAdmin, userController.delete.bind(userController));
 
 export default router;

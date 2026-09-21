@@ -164,6 +164,47 @@ export class UserRepository {
       where: { name },
     });
   }
+
+  async deleteUser(id) {
+    const userId = parseInt(id, 10);
+    // Check if user has dependent tickets or comments
+    const [createdTicketsCount, contactTicketsCount, assignedTicketsCount, commentsCount] = await Promise.all([
+      prisma.ticket.count({ where: { createdBy: userId } }),
+      prisma.ticket.count({ where: { contactId: userId } }),
+      prisma.ticket.count({ where: { agentId: userId } }),
+      prisma.ticketComment.count({ where: { userId } }),
+    ]);
+
+    if (createdTicketsCount > 0 || commentsCount > 0) {
+      const err = new Error(
+        `Cannot delete user because they have authored ${createdTicketsCount} ticket(s) and ${commentsCount} comment(s). You can change their status to INACTIVE instead.`
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    return prisma.$transaction(async (tx) => {
+      // Unlink any tickets where user is contact or assigned agent
+      if (contactTicketsCount > 0) {
+        await tx.ticket.updateMany({
+          where: { contactId: userId },
+          data: { contactId: null },
+        });
+      }
+      if (assignedTicketsCount > 0) {
+        await tx.ticket.updateMany({
+          where: { agentId: userId },
+          data: { agentId: null },
+        });
+      }
+
+      await tx.refreshToken.deleteMany({ where: { userId } });
+      await tx.passwordResetToken.deleteMany({ where: { userId } });
+      await tx.agentGroup.deleteMany({ where: { userId } });
+      await tx.auditLog.deleteMany({ where: { userId } }).catch(() => {});
+      return tx.user.delete({ where: { id: userId } });
+    });
+  }
 }
 
 export default new UserRepository();
