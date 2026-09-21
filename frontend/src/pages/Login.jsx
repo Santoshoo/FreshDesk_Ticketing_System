@@ -13,11 +13,10 @@ import {
   Laptop,
   Headphones,
   AlertCircle,
-  X,
+  Coffee,
+  Check,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
-import authApi from '../services/authApi.js';
-import { Modal } from '../components/ui/index.jsx';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -40,7 +39,7 @@ export default function Login() {
   const handleStandardLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Please provide both email/employee ID and password.');
+      setError('Please enter your email ID and password.');
       return;
     }
 
@@ -50,211 +49,241 @@ export default function Login() {
       await login(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error?.message || err.message || 'Login failed');
+      setError(err.response?.data?.error?.message || err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#f0f4f9] font-['Inter',sans-serif]">
-      {/* LEFT PANEL: Blue Branding Showcase */}
-      <div className="lg:w-1/2 bg-gradient-to-br from-[#0d59cf] via-[#0b51c1] to-[#0842a0] text-white p-8 lg:p-14 flex flex-col justify-between relative overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#f0f4fa] font-['Inter',sans-serif]">
+      {/* ================= LEFT PANEL: Deep Royal Blue Showcase ================= */}
+      <div className="lg:w-1/2 bg-gradient-to-b from-[#0055d4] via-[#0047b8] to-[#003896] text-white p-8 sm:p-12 lg:p-14 flex flex-col justify-between relative overflow-hidden shadow-2xl">
+        {/* Soft radial glow in background */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-400/15 rounded-full blur-3xl pointer-events-none -mr-32 -mt-32"></div>
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-600/30 rounded-full blur-3xl pointer-events-none -ml-24 -mb-24"></div>
 
-        {/* Top Branding */}
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="font-extrabold text-2xl tracking-tight">KIMS</span>
-            <span className="font-light text-2xl text-blue-200">Helpdesk</span>
+        {/* Top Header */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="font-black text-2xl tracking-tight text-white">KIMS</span>
+            <span className="font-light text-2xl text-sky-300">Helpdesk</span>
           </div>
-          <p className="text-xs text-blue-200 tracking-wider">Raise. Track. Resolve.</p>
+          <p className="text-xs text-blue-200/80 tracking-wide font-medium">Raise. Track. Resolve.</p>
 
-          <div className="mt-10 lg:mt-14 max-w-lg">
-            <h2 className="text-3xl lg:text-4xl font-bold tracking-tight leading-tight">
+          {/* Hero Heading */}
+          <div className="mt-8 lg:mt-12 max-w-lg">
+            <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight text-white">
               Your Support,
               <br />
               Our Priority
             </h2>
-            <p className="mt-3 text-sm text-blue-100/90 leading-relaxed font-normal">
+            <p className="mt-2.5 text-xs sm:text-sm text-blue-100/90 leading-relaxed font-normal">
               Get quick IT support, track your requests, and stay updated — all in one place.
             </p>
           </div>
 
           {/* 4 Feature Badges */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 mt-8 max-w-xl">
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-xl border border-white/15">
-              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-7 max-w-2xl">
+            {/* Raise Tickets */}
+            <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center mb-2.5">
                 <FileText className="w-4 h-4 text-white" />
               </div>
-              <h4 className="text-xs font-semibold leading-tight">Raise Tickets</h4>
-              <p className="text-[10px] text-blue-100/80 mt-0.5 leading-tight">Report issues easily</p>
+              <h4 className="text-xs font-bold leading-tight text-white">Raise Tickets</h4>
+              <p className="text-[10px] text-blue-100/75 mt-1 leading-tight">Report issues easily</p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-xl border border-white/15">
-              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2">
+            {/* Track Status */}
+            <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center mb-2.5">
                 <Search className="w-4 h-4 text-white" />
               </div>
-              <h4 className="text-xs font-semibold leading-tight">Track Status</h4>
-              <p className="text-[10px] text-blue-100/80 mt-0.5 leading-tight">Stay updated in real time</p>
+              <h4 className="text-xs font-bold leading-tight text-white">Track Status</h4>
+              <p className="text-[10px] text-blue-100/75 mt-1 leading-tight">Stay updated in real time</p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-xl border border-white/15">
-              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2">
+            {/* Collaboration */}
+            <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center mb-2.5">
                 <Users className="w-4 h-4 text-white" />
               </div>
-              <h4 className="text-xs font-semibold leading-tight">Collaboration</h4>
-              <p className="text-[10px] text-blue-100/80 mt-0.5 leading-tight">Work together for faster resolution</p>
+              <h4 className="text-xs font-bold leading-tight text-white">Collaboration</h4>
+              <p className="text-[10px] text-blue-100/75 mt-1 leading-tight">Work together for faster resolution</p>
             </div>
 
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-xl border border-white/15">
-              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-2">
+            {/* Quick Resolution */}
+            <div className="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/15 shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center mb-2.5">
                 <CheckCircle2 className="w-4 h-4 text-white" />
               </div>
-              <h4 className="text-xs font-semibold leading-tight">Quick Resolution</h4>
-              <p className="text-[10px] text-blue-100/80 mt-0.5 leading-tight">Reliable support for tomorrow</p>
+              <h4 className="text-xs font-bold leading-tight text-white">Quick Resolution</h4>
+              <p className="text-[10px] text-blue-100/75 mt-1 leading-tight">Reliable support for a better tomorrow</p>
             </div>
           </div>
         </div>
 
-        {/* Center Minimal Workspace Illustration Graphic */}
-        <div className="my-8 hidden sm:flex items-center justify-center">
-          <div className="w-full max-w-sm bg-blue-500/20 backdrop-blur-sm rounded-2xl border border-white/20 p-6 flex items-center gap-5 shadow-inner">
-            <div className="w-14 h-14 rounded-2xl bg-blue-600 border border-white/30 flex items-center justify-center shadow-lg">
-              <Laptop className="w-7 h-7 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5 text-xs font-bold text-white uppercase tracking-wider">
-                <Headphones className="w-3.5 h-3.5 text-blue-300" />
-                24/7 ICT Helpdesk Desk
+        {/* Center 3D/Vector Desk Setup Illustration */}
+        <div className="my-6 hidden sm:flex items-center justify-center relative z-10">
+          <div className="w-full max-w-md bg-white/5 backdrop-blur-sm rounded-3xl border border-white/10 p-6 flex flex-col items-center justify-center text-center relative shadow-inner">
+            {/* Table Surface with Laptop and Headset */}
+            <div className="relative w-72 h-44 flex items-center justify-center">
+              {/* Laptop base */}
+              <div className="w-56 h-36 bg-[#002f80] rounded-2xl border-2 border-sky-400/40 shadow-2xl p-2.5 flex flex-col justify-between relative transform -rotate-1">
+                {/* Screen */}
+                <div className="w-full h-24 bg-[#001f5c] rounded-xl border border-sky-300/30 flex items-center justify-center relative overflow-hidden">
+                  <div className="w-12 h-12 rounded-full bg-sky-500/20 border border-sky-400/40 flex items-center justify-center">
+                    <Headphones className="w-7 h-7 text-sky-200 animate-pulse" />
+                  </div>
+                </div>
+                {/* Keyboard area */}
+                <div className="w-full h-4 bg-sky-950/60 rounded-md border border-sky-500/20"></div>
               </div>
-              <p className="text-xs text-blue-100/80 mt-0.5">
-                Hospital Information Systems & Support Portal
-              </p>
+
+              {/* Coffee Mug */}
+              <div className="absolute -right-2 top-8 w-14 h-16 bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col items-center justify-center p-1 transform rotate-6">
+                <span className="text-[10px] font-black text-[#0055d4]">KIMS</span>
+                <div className="w-3 h-0.5 bg-blue-200 rounded mt-0.5"></div>
+              </div>
+
+              {/* Notebook & Pen */}
+              <div className="absolute -left-3 bottom-0 w-16 h-12 bg-sky-200/90 rounded-lg shadow-md border border-white/40 transform -rotate-12 flex items-center justify-center">
+                <div className="w-10 h-0.5 bg-sky-400/60 rounded"></div>
+              </div>
             </div>
+
+            <p className="text-[11px] font-bold text-sky-200 tracking-wider uppercase mt-2">
+              Hospital ICT Helpdesk System
+            </p>
           </div>
         </div>
 
         {/* Bottom Hospital Footer */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-white/20 pt-6 gap-4 text-xs text-blue-100/80">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-white/15 pt-5 gap-3 text-xs text-blue-100/80 relative z-10">
           <div>
-            <p className="font-bold text-white">KIMS</p>
+            <p className="font-extrabold text-white text-sm">KIMS</p>
             <p className="text-[11px]">Institute of Medical Sciences</p>
           </div>
-          <div className="sm:text-right border-t sm:border-t-0 sm:border-l border-white/20 sm:pl-4 pt-2 sm:pt-0">
-            <p className="font-semibold text-white">IT Department</p>
+          <div className="sm:text-right border-t sm:border-t-0 sm:border-l border-white/15 sm:pl-4 pt-2 sm:pt-0">
+            <p className="font-bold text-white">IT Department</p>
             <p className="text-[11px]">Supporting a Smarter Tomorrow</p>
           </div>
         </div>
       </div>
 
-      {/* RIGHT PANEL: Sign In Card */}
-      <div className="lg:w-1/2 flex flex-col justify-between p-6 sm:p-12 lg:p-16">
-        {/* Top Help Link */}
+      {/* ================= RIGHT PANEL: Sign In Card ================= */}
+      <div className="lg:w-1/2 flex flex-col justify-between p-6 sm:p-10 lg:p-14 bg-[#f0f4fa]">
+        {/* Top Need Help link */}
         <div className="flex justify-end text-xs text-slate-500">
           <span>Need help?&nbsp;</span>
           <a
             href="mailto:ithelpdesk@kims.hospital"
-            className="text-blue-600 font-medium hover:underline"
+            className="text-[#0055d4] font-bold hover:underline"
           >
             Contact IT Support
           </a>
         </div>
 
-        {/* Center Login Box */}
-        <div className="w-full max-w-md mx-auto my-auto py-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center mb-2">
-              <span className="text-3xl font-black text-[#0d59cf] tracking-tight">KIMS</span>
-            </div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-widest -mt-1">
-              Helpdesk
-            </p>
-            <h3 className="text-xl font-bold text-slate-800 mt-4">Sign in to your account</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Access your helpdesk to raise and manage tickets.
-            </p>
-          </div>
+        {/* Floating White Card */}
+        <div className="w-full max-w-md mx-auto my-auto py-6">
+          <div className="bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-slate-200/70">
+            {/* Logo */}
+            <div className="text-center mb-6">
+              <span className="text-3xl font-black text-[#0055d4] tracking-tight block">
+                KIMS
+              </span>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest block -mt-1">
+                Helpdesk
+              </span>
 
-          {error && (
-            <div className="mb-5 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
+              <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 mt-4 tracking-tight">
+                Sign in to your account
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Access your helpdesk to raise and manage tickets.
+              </p>
             </div>
-          )}
 
-          <form onSubmit={handleStandardLogin} className="space-y-4">
-            {/* Email or Employee ID Field */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Email ID or Employee ID <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter your email ID or employee ID"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400 text-slate-800"
-                />
+            {error && (
+              <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
               </div>
-            </div>
+            )}
 
-            {/* Password Field */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Password <span className="text-rose-500">*</span>
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 transition-all placeholder:text-slate-400 text-slate-800"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            <form onSubmit={handleStandardLogin} className="space-y-4">
+              {/* Email Field */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Email ID <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter your email ID"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0055d4] transition-all placeholder:text-slate-400 text-slate-800"
+                  />
+                </div>
+              </div>
+
+              {/* Password Field */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Password <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0055d4] transition-all placeholder:text-slate-400 text-slate-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Forgot Password Link */}
+              <div className="flex justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-semibold text-[#0055d4] hover:underline"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                  Forgot Password?
+                </Link>
               </div>
-            </div>
 
-            {/* Forgot Password Link */}
-            <div className="flex justify-end pt-1">
-              <Link
-                to="/forgot-password"
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-[#0055d4] hover:bg-[#0047b8] active:scale-[0.99] text-white font-bold py-2.5 px-4 rounded-xl shadow-md shadow-blue-600/25 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mt-2"
               >
-                Forgot Password?
-              </Link>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[#0d59cf] hover:bg-[#0b51c1] active:scale-[0.99] text-white font-semibold py-2.5 px-4 rounded-lg shadow-md shadow-blue-500/25 transition-all text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                'Login'
-              )}
-            </button>
-          </form>
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  'Login'
+                )}
+              </button>
+            </form>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} KIMS. All rights reserved.
+          © 2026 KIMS. All rights reserved.
         </div>
       </div>
     </div>
