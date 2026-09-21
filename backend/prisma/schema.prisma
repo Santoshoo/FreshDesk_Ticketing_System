@@ -311,6 +311,7 @@ model PasswordResetToken {
 
 model EmployeeEmail {
   id              Int         @id @default(autoincrement())
+  name            String?     @db.VarChar(150)
   email           String      @db.VarChar(150)
   normalizedEmail String      @db.VarChar(150) @map("normalized_email")
   departmentId    Int?        @map("department_id")

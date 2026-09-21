@@ -94,6 +94,7 @@ export class EmployeeEmailRepository {
 
     if (cleanQuery) {
       where.OR = [
+        { name: { contains: cleanQuery } },
         { normalizedEmail: { contains: cleanQuery } },
         { department: { name: { contains: cleanQuery } } },
       ];
@@ -105,6 +106,7 @@ export class EmployeeEmailRepository {
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: {
         id: true,
+        name: true,
         email: true,
         normalizedEmail: true,
         departmentId: true,

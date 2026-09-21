@@ -30,6 +30,11 @@ export const employeeEmailApi = {
     const res = await api.delete(`/employee-emails/${id}`);
     return res.data;
   },
+
+  bulkUpload: async (records) => {
+    const res = await api.post('/employee-emails/bulk', { records });
+    return res.data;
+  },
 };
 
 export default employeeEmailApi;

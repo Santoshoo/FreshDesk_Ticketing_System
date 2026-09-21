@@ -83,115 +83,150 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
-      {/* Top Welcome Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            Welcome back, {user?.name?.split(' ')[0] || 'Santosh'}!
+      {/* Top Welcome Banner with Quick Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-[#0b1d3a] to-slate-900 p-6 rounded-3xl text-white shadow-xl relative overflow-hidden">
+        {/* Background glow orb */}
+        <div className="absolute -right-10 -top-10 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute right-40 -bottom-10 w-48 h-48 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 space-y-1">
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-[11px] font-semibold text-sky-200 mb-1">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>KIMS Health ICT Helpdesk System</span>
+          </div>
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+            Welcome back, {user?.name?.split(' ')[0] || 'Santosh'}! 👋
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Here's what's happening with your tickets today.
+          <p className="text-xs text-slate-300">
+            Real-time support operations, queue management, and resolution metrics.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <span>{todayFormatted} (Today)</span>
+        <div className="relative z-10 flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
+          <div className="inline-flex items-center gap-2 px-3 py-2 bg-white/10 backdrop-blur-md border border-white/10 rounded-2xl text-xs font-semibold text-slate-200">
+            <Calendar className="w-3.5 h-3.5 text-sky-300" />
+            <span>{todayFormatted}</span>
           </div>
 
           <button
             onClick={fetchDashboardData}
             disabled={loading}
             title="Refresh metrics"
-            className="p-2 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-xl text-slate-600 transition-colors shadow-2xs"
+            className="p-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 rounded-2xl text-white transition-all cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
+
+          <Link
+            to="/tickets/create"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-sky-500 to-teal-400 hover:from-sky-400 hover:to-teal-300 text-slate-950 font-extrabold text-xs rounded-2xl shadow-lg shadow-sky-500/20 transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <span>+ Create Ticket</span>
+          </Link>
         </div>
       </div>
 
       {error && (
-        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2.5">
+        <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2.5">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* 5 KPI Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+      {/* 5 KPI Metric Cards with Modern Gradient Top Borders */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Total Tickets */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-slate-900"></div>
-            <span className="text-xs font-semibold text-slate-500">Total Tickets</span>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-slate-700 to-slate-900" />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Tickets</span>
+            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700">
+              <span className="text-sm font-black">#</span>
+            </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900">
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             {loading ? '-' : totalCount}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-            <ArrowUpRight className="w-3 h-3" />
-            <span>12% from last week</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mt-2">
+            <span className="inline-flex items-center text-emerald-600 font-bold">
+              <ArrowUpRight className="w-3 h-3" /> +12%
+            </span>
+            <span>from last week</span>
           </div>
         </div>
 
-        {/* Open */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-            <span className="text-xs font-semibold text-slate-500">Open</span>
+        {/* Open Tickets */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Open</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900">
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             {loading ? '-' : openCount}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-            <ArrowUpRight className="w-3 h-3" />
-            <span>5% (0.7%)</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mt-2">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[10px]">
+              Active
+            </span>
+            <span>Needs attention</span>
           </div>
         </div>
 
-        {/* Pending */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-            <span className="text-xs font-semibold text-slate-500">Pending</span>
+        {/* Pending Tickets */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-400 to-amber-600" />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Pending</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+              <span className="text-xs font-bold">⏳</span>
+            </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900">
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             {loading ? '-' : pendingCount}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-medium text-amber-600 mt-1">
-            <ArrowDownRight className="w-3 h-3" />
-            <span>10% (10%)</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mt-2">
+            <span className="inline-flex items-center text-amber-600 font-bold">
+              <ArrowDownRight className="w-3 h-3" /> In Progress
+            </span>
           </div>
         </div>
 
-        {/* Resolved */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-sky-500"></div>
-            <span className="text-xs font-semibold text-slate-500">Resolved</span>
+        {/* Resolved Tickets */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-400 to-sky-600" />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-sky-700 uppercase tracking-wider">Resolved</span>
+            <div className="w-8 h-8 rounded-xl bg-sky-50 flex items-center justify-center text-sky-600">
+              <span className="text-xs font-bold">✓</span>
+            </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900">
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             {loading ? '-' : resolvedCount}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-            <ArrowUpRight className="w-3 h-3" />
-            <span>20% (12%)</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mt-2">
+            <span className="inline-flex items-center text-sky-600 font-bold">
+              <ArrowUpRight className="w-3 h-3" /> Solved
+            </span>
           </div>
         </div>
 
-        {/* Closed */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-            <span className="text-xs font-semibold text-slate-500">Closed</span>
+        {/* Closed Tickets */}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-slate-400 to-slate-600" />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Closed</span>
+            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+              <span className="text-xs font-bold">🔒</span>
+            </div>
           </div>
-          <div className="text-2xl font-extrabold text-slate-900">
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             {loading ? '-' : closedCount}
           </div>
-          <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 mt-1">
-            <ArrowUpRight className="w-3 h-3" />
-            <span>15% (12%)</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mt-2">
+            <span className="text-slate-400 text-[10px]">Archived</span>
           </div>
         </div>
       </div>
@@ -323,14 +358,17 @@ export default function Dashboard() {
       </div>
 
       {/* Bottom Section: Recent Tickets */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-800">Recent Tickets</h3>
+          <div>
+            <h3 className="text-sm font-black text-slate-800 tracking-tight">Recent Ticket Queue</h3>
+            <p className="text-[11px] text-slate-400">Latest active incidents and service requests across departments</p>
+          </div>
           <Link
             to="/tickets"
-            className="text-xs font-semibold text-sky-600 hover:text-sky-700 flex items-center gap-1"
+            className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 hover:underline"
           >
-            <span>View All</span>
+            <span>View All Tickets</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -342,23 +380,23 @@ export default function Dashboard() {
             action={
               <button
                 onClick={() => navigate('/tickets/create')}
-                className="inline-flex items-center gap-2 bg-[#0284c7] hover:bg-sky-600 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-[#0284c7] hover:bg-sky-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer shadow-md shadow-sky-600/20"
               >
-                Create First Ticket
+                + Create First Ticket
               </button>
             }
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200/60">
+              <thead className="bg-slate-50/90 text-slate-500 font-bold border-b border-slate-200/60 uppercase text-[10px] tracking-wider">
                 <tr>
-                  <th className="px-5 py-3">#</th>
-                  <th className="px-5 py-3">Subject</th>
-                  <th className="px-5 py-3">Group</th>
-                  <th className="px-5 py-3">Priority</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Updated At</th>
+                  <th className="px-5 py-3.5">Ticket #</th>
+                  <th className="px-5 py-3.5">Subject & Requester</th>
+                  <th className="px-5 py-3.5">Support Group</th>
+                  <th className="px-5 py-3.5">Priority</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5">Updated</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -367,56 +405,83 @@ export default function Dashboard() {
                   const isHigh = priority === 'HIGH' || priority === 'URGENT';
                   const isLow = priority === 'LOW';
 
+                  const priorityBg = isHigh
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : isLow
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200';
+
+                  const priorityDot = isHigh
+                    ? 'bg-rose-500'
+                    : isLow
+                    ? 'bg-emerald-500'
+                    : 'bg-amber-500';
+
+                  const statusConfig =
+                    t.status === 'OPEN'
+                      ? { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'Open' }
+                      : t.status === 'PENDING'
+                      ? { bg: 'bg-amber-50 text-amber-700 border-amber-200', dot: 'bg-amber-500', label: 'Pending' }
+                      : t.status === 'IN_PROGRESS'
+                      ? { bg: 'bg-blue-50 text-blue-700 border-blue-200', dot: 'bg-blue-500', label: 'In Progress' }
+                      : t.status === 'RESOLVED'
+                      ? { bg: 'bg-sky-50 text-sky-700 border-sky-200', dot: 'bg-sky-500', label: 'Resolved' }
+                      : { bg: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400', label: 'Closed' };
+
+                  const requesterName = t.contact?.name || t.creator?.name || 'Staff User';
+                  const initial = requesterName[0]?.toUpperCase() || 'U';
+
                   return (
                     <tr
                       key={t.id}
                       onClick={() => navigate(`/tickets/${t.id}`)}
-                      className="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                      className="hover:bg-slate-50/90 cursor-pointer transition-colors group"
                     >
-                      <td className="px-5 py-3.5 font-bold text-sky-600">#{t.ticketNumber}</td>
-                      <td className="px-5 py-3.5 font-medium text-slate-800">{t.subject}</td>
-                      <td className="px-5 py-3.5 text-slate-600">{t.group?.name || 'General Support'}</td>
+                      <td className="px-5 py-3.5 font-bold font-mono text-sky-600 group-hover:text-sky-700">
+                        #{t.ticketNumber}
+                      </td>
                       <td className="px-5 py-3.5">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            isHigh
-                              ? 'bg-rose-50 text-rose-600 border border-rose-200'
-                              : isLow
-                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                              : 'bg-amber-50 text-amber-600 border border-amber-200'
-                          }`}
-                        >
-                          {isHigh ? 'High' : isLow ? 'Low' : 'Medium'}
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-black text-[11px] shrink-0">
+                            {initial}
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-800 block truncate max-w-xs group-hover:text-sky-600 transition-colors">
+                              {t.subject}
+                            </span>
+                            <span className="text-[11px] text-slate-400">
+                              {requesterName}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-600 font-medium">
+                        <span className="inline-block px-2.5 py-1 rounded-lg bg-slate-100/80 text-slate-700 text-[11px]">
+                          {t.group?.name || 'General Support'}
                         </span>
                       </td>
                       <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            t.status === 'OPEN'
-                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                              : t.status === 'PENDING' || t.status === 'IN_PROGRESS'
-                              ? 'bg-amber-50 text-amber-600 border border-amber-200'
-                              : t.status === 'RESOLVED'
-                              ? 'bg-sky-50 text-sky-600 border border-sky-200'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200'
-                          }`}
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${priorityBg}`}
                         >
-                          {t.status === 'IN_PROGRESS'
-                            ? 'In Progress'
-                            : t.status === 'RESOLVED'
-                            ? 'Resolved'
-                            : t.status === 'CLOSED'
-                            ? 'Closed'
-                            : t.status === 'PENDING'
-                            ? 'Pending'
-                            : 'Open'}
+                          <span className={`w-1.5 h-1.5 rounded-full ${priorityDot}`} />
+                          {priority}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusConfig.bg}`}
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full ${statusConfig.dot}`} />
+                          {statusConfig.label}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 text-slate-500 font-mono text-[11px]">
                         {new Date(t.updatedAt).toLocaleDateString('en-US', {
                           month: 'short',
                           day: 'numeric',
-                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
                         })}
                       </td>
                     </tr>

@@ -13,10 +13,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Upload,
 } from 'lucide-react';
 import employeeEmailApi from '../../services/employeeEmailApi.js';
 import departmentApi from '../../services/departmentApi.js';
 import { Card, Modal, EmptyState } from '../../components/ui/index.jsx';
+import BulkEmailUploadModal from '../../components/modals/BulkEmailUploadModal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
 
 export default function EmployeeEmailMaster() {
@@ -36,6 +38,7 @@ export default function EmployeeEmailMaster() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmail, setEditingEmail] = useState(null);
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     departmentId: '',
     isActive: true,
@@ -50,6 +53,9 @@ export default function EmployeeEmailMaster() {
   // Status Change Confirmation Modal State
   const [statusTarget, setStatusTarget] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
+
+  // Bulk Upload Modal State
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   // Fetch departments on mount
   useEffect(() => {
@@ -108,6 +114,7 @@ export default function EmployeeEmailMaster() {
   const openCreateModal = () => {
     setEditingEmail(null);
     setFormData({
+      name: '',
       email: '',
       departmentId: departments[0]?.id || '',
       isActive: true,
@@ -119,6 +126,7 @@ export default function EmployeeEmailMaster() {
   const openEditModal = (emailItem) => {
     setEditingEmail(emailItem);
     setFormData({
+      name: emailItem.name || '',
       email: emailItem.email,
       departmentId: emailItem.departmentId || '',
       isActive: emailItem.isActive,
@@ -135,6 +143,7 @@ export default function EmployeeEmailMaster() {
 
       if (editingEmail) {
         await employeeEmailApi.update(editingEmail.id, {
+          name: formData.name.trim() || null,
           email: formData.email.trim(),
           departmentId: formData.departmentId ? parseInt(formData.departmentId, 10) : null,
           isActive: formData.isActive,
@@ -142,6 +151,7 @@ export default function EmployeeEmailMaster() {
         showToast('Employee email updated successfully!', 'success');
       } else {
         await employeeEmailApi.create({
+          name: formData.name.trim() || null,
           email: formData.email.trim(),
           departmentId: formData.departmentId ? parseInt(formData.departmentId, 10) : null,
           isActive: formData.isActive,
@@ -225,8 +235,17 @@ export default function EmployeeEmailMaster() {
           </button>
 
           <button
+            onClick={() => setIsBulkModalOpen(true)}
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98] cursor-pointer"
+            title="Bulk upload employee emails via Excel (.xlsx) or CSV"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Bulk Upload</span>
+          </button>
+
+          <button
             onClick={openCreateModal}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98]"
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Employee Email</span>
@@ -241,7 +260,7 @@ export default function EmployeeEmailMaster() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search email address or department..."
+            placeholder="Search employee name, email or department..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -309,6 +328,7 @@ export default function EmployeeEmailMaster() {
                 <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/60">
                   <tr>
                     <th className="px-5 py-3">#</th>
+                    <th className="px-5 py-3">Employee Name</th>
                     <th className="px-5 py-3">Email Address</th>
                     <th className="px-5 py-3">Department</th>
                     <th className="px-5 py-3">Status</th>
@@ -322,7 +342,10 @@ export default function EmployeeEmailMaster() {
                     return (
                       <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="px-5 py-3 text-slate-400 font-mono text-[11px]">{rowNumber}</td>
-                        <td className="px-5 py-3 font-medium text-slate-900">
+                        <td className="px-5 py-3 font-semibold text-slate-900">
+                          {item.name || <span className="text-slate-400 font-normal italic">Not specified</span>}
+                        </td>
+                        <td className="px-5 py-3 font-medium text-slate-800">
                           <div className="flex items-center gap-2">
                             <Mail className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                             <span>{item.email}</span>
@@ -364,11 +387,10 @@ export default function EmployeeEmailMaster() {
                             <button
                               onClick={() => setStatusTarget(item)}
                               title={item.isActive ? 'Deactivate Email' : 'Activate Email'}
-                              className={`p-1 rounded transition-colors ${
-                                item.isActive
+                              className={`p-1 rounded transition-colors ${item.isActive
                                   ? 'text-amber-500 hover:bg-amber-50'
                                   : 'text-emerald-600 hover:bg-emerald-50'
-                              }`}
+                                }`}
                             >
                               {item.isActive ? (
                                 <XCircle className="w-3.5 h-3.5" />
@@ -448,12 +470,25 @@ export default function EmployeeEmailMaster() {
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Employee Name <span className="text-slate-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Dr. Ramesh Kumar"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
               Email Address <span className="text-rose-500">*</span>
             </label>
             <input
               type="email"
               required
-              placeholder="e.g. employee@kims.com"
+              placeholder="e.g. employee@kims.hospital"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
@@ -541,11 +576,10 @@ export default function EmployeeEmailMaster() {
               type="button"
               disabled={statusLoading}
               onClick={confirmStatusToggle}
-              className={`px-4 py-1.5 text-white rounded-lg text-xs font-semibold disabled:opacity-50 ${
-                statusTarget?.isActive
+              className={`px-4 py-1.5 text-white rounded-lg text-xs font-semibold disabled:opacity-50 ${statusTarget?.isActive
                   ? 'bg-amber-600 hover:bg-amber-700'
                   : 'bg-emerald-600 hover:bg-emerald-700'
-              }`}
+                }`}
             >
               {statusLoading ? 'Updating...' : statusTarget?.isActive ? 'Yes, Deactivate' : 'Yes, Activate'}
             </button>
@@ -587,6 +621,13 @@ export default function EmployeeEmailMaster() {
           </div>
         </div>
       </Modal>
+
+      {/* Bulk Email Upload Modal */}
+      <BulkEmailUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onSuccess={() => fetchEmails(1)}
+      />
     </div>
   );
 }

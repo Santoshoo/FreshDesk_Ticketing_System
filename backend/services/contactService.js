@@ -41,7 +41,7 @@ export class ContactService {
         contactMap.set(normalizedEmail, {
           id: ee.id,
           email: ee.email,
-          name: ee.email.split('@')[0], // derived display name if separate name not stored
+          name: ee.name || ee.email.split('@')[0],
           employeeId: null,
           department: ee.department?.name || null,
           departmentId: ee.departmentId || null,

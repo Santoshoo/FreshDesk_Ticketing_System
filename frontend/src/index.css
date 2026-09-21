@@ -66,9 +66,9 @@ body {
 }
 
 .badge-status-open {
-  background-color: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #dcfce7;
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
 }
 
 .badge-status-pending {
@@ -80,13 +80,81 @@ body {
 .badge-status-resolved {
   background-color: #eff6ff;
   color: #2563eb;
-  border: 1px solid #dbeafe;
+  border: 1px solid #bfdbfe;
 }
 
 .badge-status-closed {
   background-color: #f8fafc;
   color: #64748b;
   border: 1px solid #e2e8f0;
+}
+
+/* Animations & Modals */
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 14px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes confettiBurst {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-80px) rotate(360deg) scale(0.6);
+    opacity: 0;
+  }
+}
+
+.animate-modal-in {
+  animation: modalScaleIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-overlay-in {
+  animation: fadeInOverlay 0.2s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* Glassmorphism helpers */
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.glass-dark {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* TipTap Editor Styling */

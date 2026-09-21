@@ -81,6 +81,19 @@ export class EmployeeEmailController {
       next(error);
     }
   }
+
+  async bulkUpload(req, res, next) {
+    try {
+      const { records } = req.body;
+      const result = await employeeEmailService.bulkUpload(records);
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new EmployeeEmailController();

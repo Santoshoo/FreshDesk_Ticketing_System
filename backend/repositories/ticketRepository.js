@@ -34,7 +34,7 @@ export function normalizeTicketContact(ticket) {
   } else if (ticket.employeeEmail) {
     contactObj = {
       id: ticket.employeeEmail.id,
-      name: ticket.contactName || (ticket.employeeEmail.email ? ticket.employeeEmail.email.split('@')[0] : 'Requester'),
+      name: ticket.contactName || ticket.employeeEmail.name || (ticket.employeeEmail.email ? ticket.employeeEmail.email.split('@')[0] : 'Requester'),
       email: ticket.employeeEmail.email,
       employeeId: null,
       mobile: null,

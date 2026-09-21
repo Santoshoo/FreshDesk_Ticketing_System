@@ -23,6 +23,7 @@ import ticketApi from '../services/ticketApi.js';
 import groupApi from '../services/groupApi.js';
 import ticketTypeApi from '../services/ticketTypeApi.js';
 import { Modal, EmptyState } from '../components/ui/index.jsx';
+import TicketCloseModal from '../components/modals/TicketCloseModal.jsx';
 import { canEditTicket, canDeleteTicket } from '../utils/ticketPermissions.js';
 
 export default function TicketDetails() {
@@ -36,20 +37,24 @@ export default function TicketDetails() {
 
   const [ticket, setTicket] = useState(null);
   const [groups, setGroups] = useState([]);
+  const [ticketTypes, setTicketTypes] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [activeTab, setActiveTab] = useState('conversation'); // 'conversation' | 'history'
 
-  // Comment state
+  // Comment & Composer State
+  const [composerMode, setComposerMode] = useState('REPLY'); // 'REPLY' | 'INTERNAL_NOTE'
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
-  // Update Modal State
+  // Update Ticket Properties Modal State
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [updateStatus, setUpdateStatus] = useState('OPEN');
   const [updatePriority, setUpdatePriority] = useState('MEDIUM');
+  const [updateGroupId, setUpdateGroupId] = useState('');
+  const [updateTicketTypeId, setUpdateTicketTypeId] = useState('');
   const [updateAgentId, setUpdateAgentId] = useState('');
   const [updateComment, setUpdateComment] = useState('');
   const [updatingTicket, setUpdatingTicket] = useState(false);
@@ -59,6 +64,13 @@ export default function TicketDetails() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Close / Resolve Confirmation Modal State
+  const [closeModalConfig, setCloseModalConfig] = useState({
+    isOpen: false,
+    targetStatus: 'RESOLVED',
+  });
+  const [closeModalLoading, setCloseModalLoading] = useState(false);
+
   const fetchTicket = async () => {
     try {
       setLoading(true);
@@ -67,6 +79,8 @@ export default function TicketDetails() {
         setTicket(res.data);
         setUpdateStatus(res.data.status);
         setUpdatePriority(res.data.priority || 'MEDIUM');
+        setUpdateGroupId(res.data.groupId ? String(res.data.groupId) : '');
+        setUpdateTicketTypeId(res.data.ticketTypeId ? String(res.data.ticketTypeId) : '');
         setUpdateAgentId(res.data.agentId ? String(res.data.agentId) : '');
       }
     } catch (err) {
@@ -80,8 +94,12 @@ export default function TicketDetails() {
   useEffect(() => {
     fetchTicket();
     if (isAgentOrAdmin) {
-      groupApi.list({ limit: 100, status: 'ACTIVE' }).then((res) => {
-        if (res.success) setGroups(res.data || []);
+      Promise.all([
+        groupApi.list({ limit: 100, status: 'ACTIVE' }),
+        ticketTypeApi.list({ limit: 100, status: 'ACTIVE' }),
+      ]).then(([groupsRes, typesRes]) => {
+        if (groupsRes.success) setGroups(groupsRes.data || []);
+        if (typesRes.success) setTicketTypes(typesRes.data || []);
       });
     }
   }, [id]);
@@ -94,6 +112,45 @@ export default function TicketDetails() {
     }
   }, [ticket?.groupId, isAgentOrAdmin]);
 
+  const openEditPropertiesModal = () => {
+    if (!ticket) return;
+    setUpdateStatus(ticket.status);
+    setUpdatePriority(ticket.priority || 'MEDIUM');
+    setUpdateGroupId(ticket.groupId ? String(ticket.groupId) : '');
+    setUpdateTicketTypeId(ticket.ticketTypeId ? String(ticket.ticketTypeId) : '');
+    setUpdateAgentId(ticket.agentId ? String(ticket.agentId) : '');
+    setUpdateComment('');
+    setUpdateError('');
+    if (ticket.groupId) {
+      groupApi.getAgentsByGroup(ticket.groupId, { limit: 100 }).then((res) => {
+        if (res.success) setAgents(res.data || []);
+      });
+    }
+    setIsUpdateModalOpen(true);
+  };
+
+  const handleGroupChange = async (newGroupId) => {
+    setUpdateGroupId(newGroupId);
+    if (!newGroupId) {
+      setAgents([]);
+      setUpdateAgentId('');
+      return;
+    }
+    try {
+      const res = await groupApi.getAgentsByGroup(newGroupId, { limit: 100 });
+      if (res.success) {
+        const groupAgents = res.data || [];
+        setAgents(groupAgents);
+        const stillValid = groupAgents.some((a) => String(a.id) === String(updateAgentId));
+        if (!stillValid) {
+          setUpdateAgentId('');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load group agents:', err);
+    }
+  };
+
   const handleSendReply = async (e) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -101,17 +158,22 @@ export default function TicketDetails() {
     try {
       setSubmittingComment(true);
       const res = await ticketApi.addComment(id, {
-        commentType: 'REPLY',
+        commentType: composerMode,
         body: commentText.trim(),
       });
 
       if (res.success) {
         setCommentText('');
-        showToast('Reply sent successfully!', 'success');
+        showToast(
+          composerMode === 'INTERNAL_NOTE'
+            ? 'Internal note added successfully!'
+            : 'Reply sent successfully!',
+          'success'
+        );
         fetchTicket();
       }
     } catch (err) {
-      const msg = err.response?.data?.error?.message || 'Failed to send reply';
+      const msg = err.response?.data?.error?.message || 'Failed to post message';
       showToast(msg, 'error');
     } finally {
       setSubmittingComment(false);
@@ -124,18 +186,14 @@ export default function TicketDetails() {
       setUpdatingTicket(true);
       setUpdateError('');
 
-      // 1. Update status if changed
-      if (updateStatus !== ticket.status) {
-        await ticketApi.updateStatus(id, updateStatus);
-      }
-
-      // 2. Update assignment or priority
       await ticketApi.update(id, {
+        status: updateStatus,
         priority: updatePriority,
+        groupId: updateGroupId ? parseInt(updateGroupId, 10) : undefined,
+        ticketTypeId: updateTicketTypeId ? parseInt(updateTicketTypeId, 10) : undefined,
         agentId: updateAgentId ? parseInt(updateAgentId, 10) : null,
       });
 
-      // 3. Add comment note if provided
       if (updateComment.trim()) {
         await ticketApi.addComment(id, {
           commentType: 'INTERNAL_NOTE',
@@ -154,15 +212,31 @@ export default function TicketDetails() {
     }
   };
 
-  const handleQuickClose = async () => {
-    if (window.confirm('Are you sure you want to close this ticket?')) {
-      try {
-        await ticketApi.updateStatus(id, 'CLOSED');
-        showToast('Ticket closed successfully.', 'success');
-        fetchTicket();
-      } catch (err) {
-        showToast(err.response?.data?.error?.message || 'Failed to close ticket', 'error');
+  const handleOpenCloseModal = (targetStatus) => {
+    setCloseModalConfig({
+      isOpen: true,
+      targetStatus,
+    });
+  };
+
+  const handleConfirmCloseResolve = async (remark) => {
+    try {
+      setCloseModalLoading(true);
+      const targetStatus = closeModalConfig.targetStatus;
+      await ticketApi.updateStatus(id, targetStatus);
+      if (remark) {
+        await ticketApi.addComment(id, {
+          commentType: targetStatus === 'RESOLVED' ? 'REPLY' : 'INTERNAL_NOTE',
+          body: `[${targetStatus === 'RESOLVED' ? 'Resolution Summary' : 'Closure Note'}]: ${remark}`,
+        });
       }
+      showToast(`Ticket #${ticket.ticketNumber} marked as ${targetStatus.toLowerCase()} successfully!`, 'success');
+      setCloseModalConfig((prev) => ({ ...prev, isOpen: false }));
+      fetchTicket();
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || 'Failed to update ticket status', 'error');
+    } finally {
+      setCloseModalLoading(false);
     }
   };
 
@@ -226,53 +300,56 @@ export default function TicketDetails() {
           </h2>
 
           <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-              ticket.status === 'OPEN'
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${ticket.status === 'OPEN'
                 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                 : ticket.status === 'PENDING' || ticket.status === 'IN_PROGRESS'
-                ? 'bg-amber-50 text-amber-600 border border-amber-200'
-                : ticket.status === 'RESOLVED'
-                ? 'bg-sky-50 text-sky-600 border border-sky-200'
-                : 'bg-slate-100 text-slate-600 border border-slate-200'
-            }`}
+                  ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                  : ticket.status === 'RESOLVED'
+                    ? 'bg-sky-50 text-sky-600 border border-sky-200'
+                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+              }`}
           >
             {ticket.status === 'OPEN'
               ? '🟢 Open'
               : ticket.status === 'PENDING'
-              ? '🟡 Pending'
-              : ticket.status === 'IN_PROGRESS'
-              ? '🔵 In Progress'
-              : ticket.status === 'RESOLVED'
-              ? '✅ Resolved'
-              : '⚪ Closed'}
+                ? '🟡 Pending'
+                : ticket.status === 'IN_PROGRESS'
+                  ? '🔵 In Progress'
+                  : ticket.status === 'RESOLVED'
+                    ? '✅ Resolved'
+                    : '⚪ Closed'}
           </span>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+          {/* EDIT OPTION RIGHT SIDE OF STATUS */}
           {canEditTicket(user, ticket) && (
             <button
-              onClick={() => setIsUpdateModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs transition-all"
+              type="button"
+              onClick={openEditPropertiesModal}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
+              title="Edit ticket status, type, group, and agent"
             >
-              <Edit2 className="w-3.5 h-3.5 text-slate-500" />
+              <Edit2 className="w-3.5 h-3.5 text-sky-600" />
               <span>Edit</span>
             </button>
           )}
+        </div>
 
+        {/* Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
           {ticket.status !== 'CLOSED' && canEditTicket(user, ticket) && (
             <button
-              onClick={handleQuickClose}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0284c7] hover:bg-sky-600 text-white rounded-xl text-xs font-semibold shadow-xs transition-all"
+              onClick={() => handleOpenCloseModal('CLOSED')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              title="Close and archive ticket"
             >
-              <span>Close</span>
+              <span>Close Ticket</span>
             </button>
           )}
 
           {canDeleteTicket(user, ticket) && (
             <button
               onClick={() => setIsDeleteModalOpen(true)}
-              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
               title="Delete Ticket"
             >
               <Trash2 className="w-4 h-4" />
@@ -367,9 +444,8 @@ export default function TicketDetails() {
           <div className="flex items-center gap-6 border-b border-slate-200 text-xs font-semibold text-slate-500">
             <button
               onClick={() => setActiveTab('conversation')}
-              className={`pb-2 transition-colors relative ${
-                activeTab === 'conversation' ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
-              }`}
+              className={`pb-2 transition-colors relative ${activeTab === 'conversation' ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
+                }`}
             >
               Conversation
               {activeTab === 'conversation' && (
@@ -379,9 +455,8 @@ export default function TicketDetails() {
 
             <button
               onClick={() => setActiveTab('history')}
-              className={`pb-2 transition-colors relative ${
-                activeTab === 'history' ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
-              }`}
+              className={`pb-2 transition-colors relative ${activeTab === 'history' ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
+                }`}
             >
               History
               {activeTab === 'history' && (
@@ -473,15 +548,61 @@ export default function TicketDetails() {
                 </div>
               ))}
 
-              {/* Reply Composer Box */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 space-y-3">
+              {/* Reply & Internal Note Composer Box */}
+              <div
+                className={`rounded-2xl transition-all shadow-2xs p-4 space-y-3 ${
+                  composerMode === 'INTERNAL_NOTE'
+                    ? 'bg-amber-50/60 border-2 border-amber-300/90'
+                    : 'bg-white border border-slate-200/80'
+                }`}
+              >
+                {/* Mode Selector Tabs (Reply vs Add Note) */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100/80">
+                  <div className="flex items-center gap-1 p-0.5 bg-slate-100/80 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => setComposerMode('REPLY')}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        composerMode === 'REPLY'
+                          ? 'bg-white text-sky-700 shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>Reply</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setComposerMode('INTERNAL_NOTE')}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        composerMode === 'INTERNAL_NOTE'
+                          ? 'bg-amber-500 text-white shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <span>🔒 Add Note</span>
+                    </button>
+                  </div>
+
+                  {composerMode === 'INTERNAL_NOTE' && (
+                    <span className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
+                      <span>Only visible to staff & agents</span>
+                    </span>
+                  )}
+                </div>
+
                 <form onSubmit={handleSendReply}>
                   <textarea
                     rows={3}
-                    placeholder="Type a reply..."
+                    placeholder={
+                      composerMode === 'INTERNAL_NOTE'
+                        ? 'Write an internal note about this ticket (will not be seen by requester)...'
+                        : 'Type a reply to the requester...'
+                    }
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
-                    className="w-full text-xs text-slate-800 placeholder:text-slate-400 border-0 focus:outline-none resize-none p-1"
+                    className="w-full text-xs text-slate-800 placeholder:text-slate-400 border-0 focus:outline-none resize-none p-1 bg-transparent"
                   />
 
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100">
@@ -500,9 +621,13 @@ export default function TicketDetails() {
                     <button
                       type="submit"
                       disabled={submittingComment || !commentText.trim()}
-                      className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0284c7] hover:bg-sky-600 text-white rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-40"
+                      className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-40 cursor-pointer ${
+                        composerMode === 'INTERNAL_NOTE'
+                          ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20'
+                          : 'bg-[#0284c7] hover:bg-sky-600 text-white shadow-sky-600/20'
+                      }`}
                     >
-                      <span>Send</span>
+                      <span>{composerMode === 'INTERNAL_NOTE' ? 'Add Note' : 'Send'}</span>
                     </button>
                   </div>
                 </form>
@@ -540,11 +665,11 @@ export default function TicketDetails() {
         </div>
       </div>
 
-      {/* Screen 6: Update Ticket / Reassign Modal */}
+      {/* Screen 6: Edit Ticket Properties Modal with Logic-based Group/Agent Selection */}
       <Modal
         isOpen={isUpdateModalOpen}
         onClose={() => setIsUpdateModalOpen(false)}
-        title="Update Ticket"
+        title="Edit Ticket Properties"
         maxWidth="max-w-md"
       >
         {updateError && (
@@ -555,6 +680,7 @@ export default function TicketDetails() {
         )}
 
         <form onSubmit={handleUpdateTicketSubmit} className="space-y-4">
+          {/* 1. Status Dropdown */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Status <span className="text-rose-500">*</span>
@@ -562,39 +688,64 @@ export default function TicketDetails() {
             <select
               value={updateStatus}
               onChange={(e) => setUpdateStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
             >
-              <option value="OPEN">Open</option>
-              <option value="PENDING">Pending</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="RESOLVED">Resolved</option>
-              <option value="CLOSED">Closed</option>
+              <option value="OPEN">🟢 Open</option>
+              <option value="PENDING">🟡 Pending</option>
+              <option value="IN_PROGRESS">🔵 In Progress</option>
+              <option value="RESOLVED">✅ Resolved</option>
+              <option value="CLOSED">⚪ Closed</option>
             </select>
           </div>
 
+          {/* 2. Ticket Type Dropdown */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Priority <span className="text-rose-500">*</span>
+              Ticket Type <span className="text-rose-500">*</span>
             </label>
             <select
-              value={updatePriority}
-              onChange={(e) => setUpdatePriority(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              value={updateTicketTypeId}
+              onChange={(e) => setUpdateTicketTypeId(e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
             >
-              <option value="HIGH">🔴 High</option>
-              <option value="MEDIUM">🟡 Medium</option>
-              <option value="LOW">🟢 Low</option>
+              <option value="">Select Type</option>
+              {ticketTypes.map((tt) => (
+                <option key={tt.id} value={tt.id}>
+                  {tt.name}
+                </option>
+              ))}
             </select>
           </div>
 
+          {/* 3. Support Group Dropdown */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Assign To
+              Support Group <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={updateGroupId}
+              onChange={(e) => handleGroupChange(e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800 font-medium"
+            >
+              <option value="">Select Group</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Changing group automatically updates the agent list</span>
+          </div>
+
+          {/* 4. Agent Name Dropdown (Filtered by selected group based on logic) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Agent Name
             </label>
             <select
               value={updateAgentId}
               onChange={(e) => setUpdateAgentId(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800 font-medium"
             >
               <option value="">Unassigned</option>
               {agents.map((ag) => (
@@ -605,16 +756,34 @@ export default function TicketDetails() {
             </select>
           </div>
 
+          {/* 5. Priority Dropdown */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Add a comment (optional)
+              Priority <span className="text-rose-500">*</span>
+            </label>
+            <select
+              value={updatePriority}
+              onChange={(e) => setUpdatePriority(e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+            >
+              <option value="HIGH">🔴 High</option>
+              <option value="MEDIUM">🟡 Medium</option>
+              <option value="LOW">🟢 Low</option>
+              <option value="URGENT">🔥 Urgent</option>
+            </select>
+          </div>
+
+          {/* 6. Optional Internal Note */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+              Reason / Internal Note <span className="text-slate-400 font-normal">(Optional)</span>
             </label>
             <textarea
-              rows={3}
-              placeholder="Waiting for vendor response."
+              rows={2}
+              placeholder="e.g. Reassigned to HR specialist for approval..."
               value={updateComment}
               onChange={(e) => setUpdateComment(e.target.value)}
-              className="w-full p-3 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
             />
           </div>
 
@@ -622,16 +791,16 @@ export default function TicketDetails() {
             <button
               type="button"
               onClick={() => setIsUpdateModalOpen(false)}
-              className="px-4 py-2 text-xs text-slate-600 hover:bg-slate-100 rounded-xl"
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={updatingTicket}
-              className="px-5 py-2 bg-[#0284c7] hover:bg-sky-600 text-white rounded-xl text-xs font-bold shadow-xs disabled:opacity-50"
+              className="px-5 py-2 bg-[#0284c7] hover:bg-sky-600 text-white rounded-xl text-xs font-bold shadow-md shadow-sky-600/20 disabled:opacity-50 cursor-pointer"
             >
-              {updatingTicket ? 'Updating...' : 'Update'}
+              {updatingTicket ? 'Updating...' : 'Submit'}
             </button>
           </div>
         </form>
@@ -667,6 +836,16 @@ export default function TicketDetails() {
           </div>
         </div>
       </Modal>
+
+      {/* Ticket Close / Resolve Confirmation Modal */}
+      <TicketCloseModal
+        isOpen={closeModalConfig.isOpen}
+        targetStatus={closeModalConfig.targetStatus}
+        ticket={ticket}
+        onClose={() => setCloseModalConfig((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={handleConfirmCloseResolve}
+        loading={closeModalLoading}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ router.use(isAdmin);
 
 router.get('/', employeeEmailController.list.bind(employeeEmailController));
 router.post('/', employeeEmailController.create.bind(employeeEmailController));
+router.post('/bulk', employeeEmailController.bulkUpload.bind(employeeEmailController));
 router.get('/:id', employeeEmailController.getById.bind(employeeEmailController));
 router.patch('/:id', employeeEmailController.update.bind(employeeEmailController));
 router.patch('/:id/status', employeeEmailController.setStatus.bind(employeeEmailController));

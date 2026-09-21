@@ -9,16 +9,15 @@
  * Role: SUPER_ADMIN, ADMIN, AGENT can edit (when status allows).
  * EMPLOYEE cannot edit tickets.
  */
-export function canEditTicket(ticket, user) {
+export function canEditTicket(a, b) {
+  // Support both (ticket, user) and (user, ticket) invocation order
+  const ticket = a?.ticketNumber !== undefined || a?.status !== undefined ? a : b;
+  const user = a?.role !== undefined ? a : b;
+
   if (!ticket || !user) return false;
 
   // CLOSED tickets cannot be edited (must be reopened first)
   if (ticket.status === 'CLOSED') {
-    return false;
-  }
-
-  // Only OPEN and PENDING statuses are editable
-  if (ticket.status !== 'OPEN' && ticket.status !== 'PENDING') {
     return false;
   }
 
@@ -37,7 +36,11 @@ export function canEditTicket(ticket, user) {
  * - SUPER_ADMIN and ADMIN retain delete permissions.
  * - EMPLOYEE cannot delete tickets.
  */
-export function canDeleteTicket(ticket, user) {
+export function canDeleteTicket(a, b) {
+  // Support both (ticket, user) and (user, ticket) invocation order
+  const ticket = a?.ticketNumber !== undefined || a?.status !== undefined ? a : b;
+  const user = a?.role !== undefined ? a : b;
+
   if (!ticket || !user) return false;
 
   if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {

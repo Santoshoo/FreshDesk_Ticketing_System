@@ -25,6 +25,7 @@ import contactApi from '../services/contactApi.js';
 import ticketTypeApi from '../services/ticketTypeApi.js';
 import groupApi from '../services/groupApi.js';
 import ticketApi from '../services/ticketApi.js';
+import TicketSuccessModal from '../components/modals/TicketSuccessModal.jsx';
 
 export default function CreateTicket() {
   const { user } = useAuth();
@@ -50,6 +51,8 @@ export default function CreateTicket() {
   const [description, setDescription] = useState('');
   const [createAnother, setCreateAnother] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const [createdTicket, setCreatedTicket] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Master Data Dropdowns
   const [ticketTypes, setTicketTypes] = useState([]);
@@ -228,7 +231,8 @@ export default function CreateTicket() {
           setAgentId('');
           setStatus('');
         } else {
-          navigate(`/tickets/${res.data?.id}`);
+          setCreatedTicket(res.data);
+          setShowSuccessModal(true);
         }
       }
     } catch (err) {
@@ -612,6 +616,37 @@ export default function CreateTicket() {
           </div>
         </form>
       </div>
+
+      {/* Ticket Creation Success Celebration Modal */}
+      <TicketSuccessModal
+        isOpen={showSuccessModal}
+        ticket={createdTicket}
+        onClose={() => setShowSuccessModal(false)}
+        onViewTicket={() => {
+          setShowSuccessModal(false);
+          if (createdTicket?.id) {
+            navigate(`/tickets/${createdTicket.id}`);
+          }
+        }}
+        onCreateAnother={() => {
+          setShowSuccessModal(false);
+          setCreatedTicket(null);
+          setSelectedContact(null);
+          setContactSearch('');
+          setSubject('');
+          setDescription('');
+          setAttachments([]);
+          setTicketTypeId('');
+          setGroupId('');
+          setPriority('');
+          setAgentId('');
+          setStatus('');
+        }}
+        onBackToDashboard={() => {
+          setShowSuccessModal(false);
+          navigate('/dashboard');
+        }}
+      />
     </div>
   );
 }

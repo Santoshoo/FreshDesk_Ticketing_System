@@ -3,7 +3,7 @@ import departmentRepository from '../repositories/departmentRepository.js';
 export class DepartmentService {
   async listDepartments({ page = 1, limit = 50, search = '', status = '' } = {}) {
     const skip = (Math.max(1, parseInt(page, 10)) - 1) * parseInt(limit, 10);
-    const take = Math.min(100, Math.max(1, parseInt(limit, 10)));
+    const take = Math.min(1000, Math.max(1, parseInt(limit, 10)));
 
     const where = {};
     if (search) {
