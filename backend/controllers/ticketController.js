@@ -15,12 +15,13 @@ export class TicketController {
 
   async list(req, res, next) {
     try {
-      const { page, limit, search, status, groupId, agentId } = req.query;
+      const { page, limit, search, status, priority, groupId, agentId } = req.query;
       const result = await ticketService.listTickets(req.user, {
         page,
         limit,
         search,
         status,
+        priority,
         groupId,
         agentId,
         scope: 'all',
@@ -37,12 +38,13 @@ export class TicketController {
 
   async listMy(req, res, next) {
     try {
-      const { page, limit, search, status, groupId } = req.query;
+      const { page, limit, search, status, priority, groupId } = req.query;
       const result = await ticketService.listTickets(req.user, {
         page,
         limit,
         search,
         status,
+        priority,
         groupId,
         scope: 'my',
       });

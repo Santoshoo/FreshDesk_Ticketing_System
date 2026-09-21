@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Mail,
   Lock,
@@ -27,14 +27,6 @@ export default function Login() {
 
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    const errParam = searchParams.get('error');
-    if (errParam) {
-      setError(decodeURIComponent(errParam));
-    }
-  }, [searchParams]);
 
   const handleStandardLogin = async (e) => {
     e.preventDefault();

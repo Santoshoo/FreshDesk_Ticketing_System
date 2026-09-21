@@ -44,9 +44,9 @@ export default function CreateTicket() {
   const [subject, setSubject] = useState('');
   const [ticketTypeId, setTicketTypeId] = useState('');
   const [groupId, setGroupId] = useState('');
-  const [priority, setPriority] = useState('MEDIUM');
+  const [priority, setPriority] = useState('');
   const [agentId, setAgentId] = useState('');
-  const [status, setStatus] = useState('OPEN');
+  const [status, setStatus] = useState('');
   const [description, setDescription] = useState('');
   const [createAnother, setCreateAnother] = useState(false);
   const [attachments, setAttachments] = useState([]);
@@ -72,25 +72,9 @@ export default function CreateTicket() {
 
         if (typesRes.success) {
           setTicketTypes(typesRes.data || []);
-          if (typesRes.data && typesRes.data.length > 0) {
-            setTicketTypeId(typesRes.data[0].id);
-          }
         }
         if (groupsRes.success) {
           setAvailableGroups(groupsRes.data || []);
-          if (groupsRes.data && groupsRes.data.length > 0) {
-            setGroupId(groupsRes.data[0].id);
-          }
-        }
-
-        // Default contact to logged-in user
-        if (user) {
-          setSelectedContact({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            source: 'USER',
-          });
         }
       } catch (err) {
         console.error('Failed to load master data:', err);
@@ -188,6 +172,16 @@ export default function CreateTicket() {
       showToast('Please select a ticket type.', 'error');
       return;
     }
+    if (!priority) {
+      setError('Please select a Priority.');
+      showToast('Please select a priority.', 'error');
+      return;
+    }
+    if (!status) {
+      setError('Please select a Status.');
+      showToast('Please select a status.', 'error');
+      return;
+    }
     if (!description.trim()) {
       setError('Please provide a description of the issue.');
       showToast('Please enter a description.', 'error');
@@ -208,9 +202,14 @@ export default function CreateTicket() {
         ticketTypeId: parseInt(ticketTypeId, 10),
         groupId: parseInt(groupId, 10),
         agentId: agentId ? parseInt(agentId, 10) : null,
-        priority: priority || 'MEDIUM',
-        status: status || 'OPEN',
+        priority: priority,
+        status: status,
         description: description.trim(),
+        attachments: attachments.map((a) => ({
+          name: a.name,
+          size: a.size,
+          type: a.type,
+        })),
       };
 
       const res = await ticketApi.create(payload);
@@ -218,10 +217,16 @@ export default function CreateTicket() {
       if (res.success) {
         showToast(`Ticket #${res.data?.ticketNumber || ''} created successfully!`, 'success');
         if (createAnother) {
+          setSelectedContact(null);
+          setContactSearch('');
           setSubject('');
           setDescription('');
           setAttachments([]);
+          setTicketTypeId('');
+          setGroupId('');
+          setPriority('');
           setAgentId('');
+          setStatus('');
         } else {
           navigate(`/tickets/${res.data?.id}`);
         }
@@ -271,7 +276,7 @@ export default function CreateTicket() {
               <label className="block text-xs font-semibold text-slate-700">
                 Contact / Requester <span className="text-rose-500">*</span>
               </label>
-              {isAgentOrAdmin && selectedContact && (
+              {selectedContact && (
                 <button
                   type="button"
                   onClick={() => setSelectedContact(null)}
@@ -355,10 +360,15 @@ export default function CreateTicket() {
                 required
                 value={ticketTypeId}
                 onChange={(e) => setTicketTypeId(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                  !ticketTypeId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
+                }`}
               >
+                <option value="" disabled>
+                  Select Type
+                </option>
                 {ticketTypes.map((t) => (
-                  <option key={t.id} value={t.id}>
+                  <option key={t.id} value={t.id} className="text-slate-800 font-normal">
                     {t.name}
                   </option>
                 ))}
@@ -374,10 +384,15 @@ export default function CreateTicket() {
                 required
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                  !groupId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
+                }`}
               >
+                <option value="" disabled>
+                  Select Group
+                </option>
                 {availableGroups.map((g) => (
-                  <option key={g.id} value={g.id}>
+                  <option key={g.id} value={g.id} className="text-slate-800 font-normal">
                     {g.name}
                   </option>
                 ))}
@@ -390,13 +405,19 @@ export default function CreateTicket() {
                 Priority <span className="text-rose-500">*</span>
               </label>
               <select
+                required
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                  !priority ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
+                }`}
               >
-                <option value="HIGH">🔴 High</option>
-                <option value="MEDIUM">🟡 Medium</option>
-                <option value="LOW">🟢 Low</option>
+                <option value="" disabled>
+                  Select Priority
+                </option>
+                <option value="HIGH" className="text-slate-800 font-normal">🔴 High</option>
+                <option value="MEDIUM" className="text-slate-800 font-normal">🟡 Medium</option>
+                <option value="LOW" className="text-slate-800 font-normal">🟢 Low</option>
               </select>
             </div>
           </div>
@@ -411,11 +432,16 @@ export default function CreateTicket() {
               <select
                 value={agentId}
                 onChange={(e) => setAgentId(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+                disabled={!groupId}
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                  !agentId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
+                } ${!groupId ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
               >
-                <option value="">Unassigned (Auto / Next Available)</option>
+                <option value="">
+                  {!groupId ? 'Select Group first' : 'Select Agent (Optional / Unassigned)'}
+                </option>
                 {availableAgents.map((ag) => (
-                  <option key={ag.id} value={ag.id}>
+                  <option key={ag.id} value={ag.id} className="text-slate-800 font-normal">
                     {ag.name} ({ag.email})
                   </option>
                 ))}
@@ -428,15 +454,21 @@ export default function CreateTicket() {
                 Status <span className="text-rose-500">*</span>
               </label>
               <select
+                required
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                  !status ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
+                }`}
               >
-                <option value="OPEN">🟢 Open</option>
-                <option value="PENDING">🟡 Pending</option>
-                <option value="IN_PROGRESS">🔵 In Progress</option>
-                <option value="RESOLVED">✅ Resolved</option>
-                <option value="CLOSED">⚪ Closed</option>
+                <option value="" disabled>
+                  Select Status
+                </option>
+                <option value="OPEN" className="text-slate-800 font-normal">🟢 Open</option>
+                <option value="PENDING" className="text-slate-800 font-normal">🟡 Pending</option>
+                <option value="IN_PROGRESS" className="text-slate-800 font-normal">🔵 In Progress</option>
+                <option value="RESOLVED" className="text-slate-800 font-normal">✅ Resolved</option>
+                <option value="CLOSED" className="text-slate-800 font-normal">⚪ Closed</option>
               </select>
             </div>
           </div>
@@ -488,7 +520,7 @@ export default function CreateTicket() {
               <textarea
                 required
                 rows={5}
-                placeholder="We need to update the EMR plan for the Radiology department. Please check the attached document and let me know the next steps."
+                placeholder="Provide a detailed description of the issue or request..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full p-3.5 text-xs text-slate-800 bg-white border-0 focus:outline-none placeholder:text-slate-400 resize-y"

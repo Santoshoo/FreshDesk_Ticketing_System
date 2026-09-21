@@ -16,6 +16,13 @@ enum TicketStatus {
   CLOSED
 }
 
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 enum CommentType {
   REPLY
   INTERNAL_NOTE
@@ -149,11 +156,13 @@ model Ticket {
   contactName         String?                   @db.VarChar(100) @map("contact_name")
   subject             String                    @db.VarChar(255)
   ticketTypeId        Int                       @map("ticket_type_id")
+  priority            TicketPriority            @default(MEDIUM)
   status              TicketStatus              @default(OPEN)
   groupId             Int                       @map("group_id")
   agentId             Int?                      @map("agent_id")
   createdBy           Int                       @map("created_by")
   description         String                    @db.LongText
+  attachments         Json?
   createdAt           DateTime                  @default(now()) @map("created_at")
   updatedAt           DateTime                  @updatedAt @map("updated_at")
   resolvedAt          DateTime?                 @map("resolved_at")
@@ -173,6 +182,7 @@ model Ticket {
   notificationLogs    NotificationLog[]
 
   @@index([ticketNumber])
+  @@index([priority])
   @@index([status])
   @@index([groupId])
   @@index([agentId])

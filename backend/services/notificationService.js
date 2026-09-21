@@ -338,17 +338,19 @@ export class NotificationService {
         subject: ticket.subject,
       });
 
-      // Log success in database for each recipient (or as consolidated group)
-      for (const email of recipientEmails) {
-        await notificationLogRepository.createLog({
-          ticketId: ticket.id,
-          notificationType,
-          recipientType: 'GROUP',
-          recipientEmail: email,
-          status: 'SENT',
-          sentAt: new Date(),
-        });
-      }
+      // Log success in database for each recipient — batched concurrently
+      await Promise.all(
+        recipientEmails.map((email) =>
+          notificationLogRepository.createLog({
+            ticketId: ticket.id,
+            notificationType,
+            recipientType: 'GROUP',
+            recipientEmail: email,
+            status: 'SENT',
+            sentAt: new Date(),
+          })
+        )
+      );
     } catch (err) {
       logger.error({
         msg: `Failed to send group notification (${event})`,
@@ -357,16 +359,19 @@ export class NotificationService {
         error: err.message,
       });
 
-      for (const email of recipientEmails) {
-        await notificationLogRepository.createLog({
-          ticketId: ticket.id,
-          notificationType,
-          recipientType: 'GROUP',
-          recipientEmail: email,
-          status: 'FAILED',
-          errorMessage: err.message,
-        });
-      }
+      // Log failure in database for each recipient — batched concurrently
+      await Promise.all(
+        recipientEmails.map((email) =>
+          notificationLogRepository.createLog({
+            ticketId: ticket.id,
+            notificationType,
+            recipientType: 'GROUP',
+            recipientEmail: email,
+            status: 'FAILED',
+            errorMessage: err.message,
+          })
+        )
+      );
     }
   }
 }

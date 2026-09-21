@@ -418,14 +418,21 @@ export default function TicketDetails() {
                       {ticket.description}
                     </p>
 
-                    {/* Attachment chip example */}
-                    <div className="pt-2">
-                      <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 shadow-2xs">
-                        <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                        <span className="font-semibold">EMR_Plan_Document.pdf</span>
-                        <span className="text-[10px] text-slate-400">2.4 MB</span>
+                    {/* Dynamic Attachments from Ticket (only if files were uploaded) */}
+                    {ticket.attachments && Array.isArray(ticket.attachments) && ticket.attachments.length > 0 && (
+                      <div className="pt-2 flex flex-wrap gap-2">
+                        {ticket.attachments.map((file, idx) => (
+                          <div
+                            key={idx}
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 shadow-2xs"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                            <span className="font-semibold">{file.name}</span>
+                            {file.size && <span className="text-[10px] text-slate-400">{file.size}</span>}
+                          </div>
+                        ))}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>

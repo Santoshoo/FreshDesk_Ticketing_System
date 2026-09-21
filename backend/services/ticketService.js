@@ -18,10 +18,12 @@ export class TicketService {
     contactName,
     subject,
     ticketTypeId,
+    priority = 'MEDIUM',
     status = 'OPEN',
     groupId,
     agentId = null,
     description,
+    attachments = [],
   }) {
     if (!subject || subject.trim() === '') {
       const err = new Error('Subject is required');
@@ -115,6 +117,9 @@ export class TicketService {
       }
     }
 
+    const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+    const finalPriority = allowedPriorities.includes(priority) ? priority : 'MEDIUM';
+
     const allowedStatuses = ['OPEN', 'IN_PROGRESS', 'PENDING', 'ON_HOLD', 'RESOLVED', 'CLOSED'];
     const finalStatus = allowedStatuses.includes(status) ? status : 'OPEN';
 
@@ -132,11 +137,13 @@ export class TicketService {
           contactName: resolvedContactName,
           subject: subject.trim(),
           ticketTypeId: cleanTicketTypeId,
+          priority: finalPriority,
           status: finalStatus,
           groupId: cleanGroupId,
           agentId: cleanAgentId,
           createdBy: creatorUser.id,
           description: description.trim(),
+          attachments: Array.isArray(attachments) && attachments.length > 0 ? attachments : null,
         },
       });
 
@@ -185,7 +192,16 @@ export class TicketService {
     return createdTicket;
   }
 
-  async listTickets(user, { page = 1, limit = 20, search = '', status = '', groupId = '', agentId = '', scope = 'all' } = {}) {
+  async listTickets(user, {
+    page = 1,
+    limit = 50,
+    search = '',
+    status = '',
+    priority = '',
+    groupId = null,
+    agentId = null,
+    scope = 'all',
+  }) {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const take = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
     const skip = (pageNum - 1) * take;
@@ -222,6 +238,10 @@ export class TicketService {
       where.status = status;
     }
 
+    if (priority) {
+      where.priority = priority;
+    }
+
     if (groupId) {
       where.groupId = parseInt(groupId, 10);
     }
@@ -231,16 +251,29 @@ export class TicketService {
     }
 
     if (scope === 'my') {
-      where.OR = [
+      const scopeOr = [
         { contactId: user.id },
         { agentId: user.id },
         { createdBy: user.id },
       ];
+      if (where.OR) {
+        // Combine search filter AND scope filter so both constraints are respected
+        where.AND = [{ OR: where.OR }, { OR: scopeOr }];
+        delete where.OR;
+      } else {
+        where.OR = scopeOr;
+      }
     } else if (user.role === 'EMPLOYEE') {
-      where.OR = [
+      const employeeOr = [
         { contactId: user.id },
         { createdBy: user.id },
       ];
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: employeeOr }];
+        delete where.OR;
+      } else {
+        where.OR = employeeOr;
+      }
     }
 
     const [tickets, total] = await Promise.all([
@@ -277,7 +310,7 @@ export class TicketService {
     return ticket;
   }
 
-  async updateTicket(user, ticketId, { subject, description, ticketTypeId, groupId, agentId, status }) {
+  async updateTicket(user, ticketId, { subject, description, ticketTypeId, groupId, agentId, priority, status, attachments }) {
     const ticket = await ticketRepository.findById(ticketId);
     if (!ticket) {
       const err = new Error('Ticket not found');
@@ -320,6 +353,17 @@ export class TicketService {
     if (groupId) updateData.groupId = parseInt(groupId, 10);
     if (agentId !== undefined) {
       updateData.agentId = agentId ? parseInt(agentId, 10) : null;
+    }
+
+    if (priority) {
+      const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+      if (allowedPriorities.includes(priority)) {
+        updateData.priority = priority;
+      }
+    }
+
+    if (attachments !== undefined) {
+      updateData.attachments = Array.isArray(attachments) && attachments.length > 0 ? attachments : null;
     }
 
     if (status) {

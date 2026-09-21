@@ -3,6 +3,20 @@ import { config } from '../config/env.js';
 import { prisma } from '../config/database.js';
 
 /**
+ * Lightweight in-memory user cache with a 60-second TTL.
+ * Avoids a DB round-trip on every authenticated API request.
+ * Each entry: Map<userId, { user: req.user shape, expiresAt: timestamp }>
+ *
+ * Call invalidateUserCache(userId) after any user status or role change.
+ */
+const userCache = new Map();
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+export function invalidateUserCache(userId) {
+  userCache.delete(userId);
+}
+
+/**
  * Authentication / Context Middleware
  * Operates without login / password flow. Extracts current user context from:
  * 1. 'x-user-id' request header (set by frontend role/user switcher)
@@ -53,7 +67,14 @@ export async function authMiddleware(req, res, next) {
       });
     }
 
-    // 4. Fetch user from database
+    // 4. Check in-memory cache before hitting the database
+    const cached = userCache.get(targetUserId);
+    if (cached && cached.expiresAt > Date.now()) {
+      req.user = cached.user;
+      return next();
+    }
+
+    // 5. Cache miss — fetch user from database
     const user = await prisma.user.findUnique({
       where: { id: targetUserId },
       include: {
@@ -63,6 +84,8 @@ export async function authMiddleware(req, res, next) {
     });
 
     if (!user || user.status !== 'ACTIVE') {
+      // Evict stale cache entry if present
+      userCache.delete(targetUserId);
       return res.status(401).json({
         success: false,
         error: {
@@ -72,7 +95,7 @@ export async function authMiddleware(req, res, next) {
       });
     }
 
-    // 5. Restrict access to Super Admin, Admin, and Support Agent roles
+    // 6. Restrict access to Super Admin, Admin, and Support Agent roles
     const userRole = user.role?.name;
     const allowedRoles = ['SUPER_ADMIN', 'ADMIN', 'AGENT'];
     if (!allowedRoles.includes(userRole)) {
@@ -85,7 +108,7 @@ export async function authMiddleware(req, res, next) {
       });
     }
 
-    req.user = {
+    const userContext = {
       id: user.id,
       name: user.name,
       email: user.email,
@@ -98,6 +121,13 @@ export async function authMiddleware(req, res, next) {
       status: user.status,
     };
 
+    // 7. Populate cache for subsequent requests
+    userCache.set(targetUserId, {
+      user: userContext,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+
+    req.user = userContext;
     next();
   } catch (error) {
     next(error);

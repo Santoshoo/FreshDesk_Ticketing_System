@@ -61,20 +61,28 @@ export default function Users() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fetchData = async () => {
+  // Fetch stable reference data once on mount (departments, roles, employee emails)
+  const fetchReferenceData = async () => {
     try {
-      setLoading(true);
-      const [usersRes, deptsRes, rolesRes, empEmailsRes] = await Promise.all([
-        userApi.list({ search, limit: 100 }),
+      const [deptsRes, rolesRes, empEmailsRes] = await Promise.all([
         departmentApi.list({ limit: 100, status: 'ACTIVE' }),
         userApi.getRoles(),
         employeeEmailApi.list({ limit: 500, status: 'ACTIVE' }),
       ]);
-
-      if (usersRes.success) setUsers(usersRes.data || []);
       if (deptsRes.success) setDepartments(deptsRes.data || []);
       if (rolesRes.success) setRoles(rolesRes.data || []);
       if (empEmailsRes.success) setEmployeeEmails(empEmailsRes.data || []);
+    } catch (err) {
+      console.error('Failed to load reference data:', err);
+    }
+  };
+
+  // Fetch users list — re-runs when search changes
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const usersRes = await userApi.list({ search, limit: 100 });
+      if (usersRes.success) setUsers(usersRes.data || []);
     } catch (err) {
       console.error('Failed to load users data:', err);
     } finally {
@@ -82,8 +90,14 @@ export default function Users() {
     }
   };
 
+  // Reference data: fetch once on mount
   useEffect(() => {
-    fetchData();
+    fetchReferenceData();
+  }, []);
+
+  // Users list: fetch on mount and whenever search changes
+  useEffect(() => {
+    fetchUsers();
   }, [search]);
 
   // Open Create Modal

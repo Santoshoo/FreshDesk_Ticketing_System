@@ -22,10 +22,7 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow browser client from localhost:5173 or direct server calls
-      callback(null, true);
-    },
+    origin: config.corsOrigin,
     credentials: true,
   })
 );

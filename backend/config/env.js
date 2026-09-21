@@ -1,14 +1,26 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+const nodeEnv = process.env.NODE_ENV || 'development';
+
+// Guard: In production, JWT secrets MUST be explicitly set — never fall back to defaults.
+if (nodeEnv === 'production') {
+  if (!process.env.JWT_ACCESS_SECRET || !process.env.JWT_REFRESH_SECRET) {
+    throw new Error(
+      'FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be set as environment variables in production mode. ' +
+      'Do not rely on default fallback values.'
+    );
+  }
+}
+
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv,
   databaseUrl: process.env.DATABASE_URL,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'kims_jwt_access_secret_super_secure_key_12345',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'kims_jwt_refresh_secret_super_secure_key_67890',
-    accessExpiry: process.env.JWT_ACCESS_EXPIRY || '1d',
+    accessExpiry: process.env.JWT_ACCESS_EXPIRY || '1h',
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
   },
 

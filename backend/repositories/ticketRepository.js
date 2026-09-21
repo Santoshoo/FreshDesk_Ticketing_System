@@ -1,5 +1,22 @@
 import { prisma } from '../config/database.js';
 
+/**
+ * Shared select/include block for list-level ticket queries (findMany, findByTicketNumber, updateTicket).
+ * Extracted to a single constant to prevent divergence across methods.
+ */
+const TICKET_LIST_INCLUDE = {
+  contact: {
+    select: { id: true, name: true, email: true, employeeId: true, mobile: true, department: { select: { id: true, name: true } } },
+  },
+  employeeEmail: {
+    select: { id: true, email: true, normalizedEmail: true, department: { select: { id: true, name: true } } },
+  },
+  ticketType: { select: { id: true, name: true } },
+  group: { select: { id: true, name: true } },
+  agent: { select: { id: true, name: true, email: true, employeeId: true } },
+  creator: { select: { id: true, name: true, employeeId: true } },
+};
+
 export function normalizeTicketContact(ticket) {
   if (!ticket) return ticket;
   let contactObj = null;
@@ -49,26 +66,7 @@ export class TicketRepository {
       skip,
       take,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      include: {
-        contact: {
-          select: { id: true, name: true, email: true, employeeId: true, mobile: true, department: { select: { id: true, name: true } } },
-        },
-        employeeEmail: {
-          select: { id: true, email: true, normalizedEmail: true, department: { select: { id: true, name: true } } },
-        },
-        ticketType: {
-          select: { id: true, name: true },
-        },
-        group: {
-          select: { id: true, name: true },
-        },
-        agent: {
-          select: { id: true, name: true, email: true, employeeId: true },
-        },
-        creator: {
-          select: { id: true, name: true, employeeId: true },
-        },
-      },
+      include: TICKET_LIST_INCLUDE,
     });
 
     return tickets.map(normalizeTicketContact);
@@ -83,24 +81,8 @@ export class TicketRepository {
     const ticket = await prisma.ticket.findUnique({
       where: { id: numericId },
       include: {
-        contact: {
-          select: { id: true, name: true, email: true, employeeId: true, mobile: true, department: { select: { id: true, name: true } } },
-        },
-        employeeEmail: {
-          select: { id: true, email: true, normalizedEmail: true, department: { select: { id: true, name: true } } },
-        },
-        ticketType: {
-          select: { id: true, name: true },
-        },
-        group: {
-          select: { id: true, name: true },
-        },
-        agent: {
-          select: { id: true, name: true, email: true, employeeId: true },
-        },
-        creator: {
-          select: { id: true, name: true, employeeId: true },
-        },
+        // Extend the shared list include with detail-only relations
+        ...TICKET_LIST_INCLUDE,
         comments: {
           orderBy: { createdAt: 'asc' },
           include: {
@@ -139,18 +121,7 @@ export class TicketRepository {
     const cleanNumber = ticketNumber.replace(/^#/, '').trim();
     const ticket = await prisma.ticket.findUnique({
       where: { ticketNumber: cleanNumber },
-      include: {
-        contact: {
-          select: { id: true, name: true, email: true, employeeId: true, department: { select: { id: true, name: true } } },
-        },
-        employeeEmail: {
-          select: { id: true, email: true, normalizedEmail: true, department: { select: { id: true, name: true } } },
-        },
-        ticketType: true,
-        group: true,
-        agent: true,
-        creator: true,
-      },
+      include: TICKET_LIST_INCLUDE,
     });
 
     return normalizeTicketContact(ticket);
@@ -164,14 +135,7 @@ export class TicketRepository {
         ...data,
         updatedAt: new Date(),
       },
-      include: {
-        contact: {
-          select: { id: true, name: true, email: true, employeeId: true, department: { select: { name: true } } },
-        },
-        ticketType: true,
-        group: true,
-        agent: true,
-      },
+      include: TICKET_LIST_INCLUDE,
     });
   }
 
@@ -269,10 +233,15 @@ export class TicketRepository {
       };
     }
 
+    // Fetch enough records from each source to accurately sort and paginate.
+    // Over-fetching by (skip + take) ensures the merged sort has sufficient
+    // data to produce the correct page after slicing.
+    const fetchLimit = skip + take;
+
     const [statusLogs, assignmentLogs] = await Promise.all([
       prisma.ticketStatusHistory.findMany({
         where: whereTicket,
-        take: 50,
+        take: fetchLimit,
         orderBy: { changedAt: 'desc' },
         include: {
           user: { select: { id: true, name: true, role: true } },
@@ -290,7 +259,7 @@ export class TicketRepository {
       }),
       prisma.ticketAssignmentHistory.findMany({
         where: whereTicket,
-        take: 50,
+        take: fetchLimit,
         orderBy: { changedAt: 'desc' },
         include: {
           changer: { select: { id: true, name: true, role: true } },
