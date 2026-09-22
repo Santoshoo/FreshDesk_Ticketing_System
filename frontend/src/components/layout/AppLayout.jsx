@@ -12,7 +12,7 @@ export default function AppLayout() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#6366f1', borderTopColor: 'transparent' }}></div>
           <p className="text-sm font-medium text-slate-500">Loading KIMS Service Desk...</p>
         </div>
       </div>
@@ -24,7 +24,7 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex">
+    <div className="min-h-screen flex" style={{ background: '#f0f2f8' }}>
       {/* Dark Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 

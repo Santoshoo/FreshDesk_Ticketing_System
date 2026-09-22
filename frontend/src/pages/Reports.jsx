@@ -43,7 +43,7 @@ export default function Reports() {
   const donutGradient = `conic-gradient(
     #10b981 0deg ${openPct * 3.6}deg,
     #f59e0b ${openPct * 3.6}deg ${(openPct + pendingPct) * 3.6}deg,
-    #0284c7 ${(openPct + pendingPct) * 3.6}deg ${(openPct + pendingPct + resolvedPct) * 3.6}deg,
+    #6366f1 ${(openPct + pendingPct) * 3.6}deg ${(openPct + pendingPct + resolvedPct) * 3.6}deg,
     #ef4444 ${(openPct + pendingPct + resolvedPct) * 3.6}deg 360deg
   )`;
 
@@ -81,12 +81,12 @@ export default function Reports() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`pb-2.5 transition-colors relative whitespace-nowrap ${
-              activeTab === tab.id ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
+              activeTab === tab.id ? 'text-[#6366f1] font-bold' : 'hover:text-slate-800'
             }`}
           >
             {tab.label}
             {activeTab === tab.id && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0284c7] rounded-full"></span>
+              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#6366f1] rounded-full"></span>
             )}
           </button>
         ))}
@@ -107,8 +107,8 @@ export default function Reports() {
           <p className="text-2xl font-extrabold text-amber-600 mt-1">{pending}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-          <p className="text-xs font-semibold text-sky-600">Resolved</p>
-          <p className="text-2xl font-extrabold text-sky-600 mt-1">{resolved}</p>
+          <p className="text-xs font-semibold text-indigo-600">Resolved</p>
+          <p className="text-2xl font-extrabold text-indigo-600 mt-1">{resolved}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
           <p className="text-xs font-semibold text-rose-600">Closed</p>
@@ -124,8 +124,8 @@ export default function Reports() {
           <svg viewBox="0 0 600 130" className="w-full h-40 overflow-visible" preserveAspectRatio="none">
             <defs>
               <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#0284c7" stopOpacity="0.3" />
-                <stop offset="100%" stopColor="#0284c7" stopOpacity="0.0" />
+                <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
               </linearGradient>
             </defs>
 
@@ -143,16 +143,16 @@ export default function Reports() {
             <path
               d="M 0 100 C 60 110, 120 70, 180 85 C 240 100, 300 40, 360 45 C 420 50, 480 80, 540 60 L 600 30"
               fill="none"
-              stroke="#0284c7"
+              stroke="#6366f1"
               strokeWidth="2.5"
               strokeLinecap="round"
             />
 
             {/* Data points */}
-            <circle cx="180" cy="85" r="3.5" fill="#0284c7" />
-            <circle cx="360" cy="45" r="3.5" fill="#0284c7" />
-            <circle cx="540" cy="60" r="3.5" fill="#0284c7" />
-            <circle cx="600" cy="30" r="3.5" fill="#0284c7" />
+            <circle cx="180" cy="85" r="3.5" fill="#6366f1" />
+            <circle cx="360" cy="45" r="3.5" fill="#6366f1" />
+            <circle cx="540" cy="60" r="3.5" fill="#6366f1" />
+            <circle cx="600" cy="30" r="3.5" fill="#6366f1" />
           </svg>
 
           {/* Month Labels */}
@@ -200,7 +200,7 @@ export default function Reports() {
                 <span className="text-slate-700">Pending {pending} ({pendingPct}%)</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
                 <span className="text-slate-700">Resolved {resolved} ({resolvedPct}%)</span>
               </div>
               <div className="flex items-center gap-2">
@@ -217,9 +217,9 @@ export default function Reports() {
 
           <div className="h-44 flex items-end justify-between gap-3 px-2 pt-4">
             {[
-              { name: 'EMR Support', val: 40, height: '90%', color: 'bg-sky-600' },
-              { name: 'Desktop', val: 28, height: '65%', color: 'bg-sky-500' },
-              { name: 'Radiology', val: 20, height: '48%', color: 'bg-sky-400' },
+              { name: 'EMR Support', val: 40, height: '90%', color: 'bg-indigo-600' },
+              { name: 'Desktop', val: 28, height: '65%', color: 'bg-indigo-500' },
+              { name: 'Radiology', val: 20, height: '48%', color: 'bg-indigo-400' },
               { name: 'Helpdesk', val: 24, height: '55%', color: 'bg-amber-400' },
               { name: 'IT Infra', val: 12, height: '30%', color: 'bg-emerald-400' },
             ].map((bar) => (

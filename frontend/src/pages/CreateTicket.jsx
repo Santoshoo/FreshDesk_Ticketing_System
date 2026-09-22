@@ -284,7 +284,7 @@ export default function CreateTicket() {
                 <button
                   type="button"
                   onClick={() => setSelectedContact(null)}
-                  className="text-[11px] font-semibold text-sky-600 hover:text-sky-800"
+                  className="text-[11px] font-semibold text-indigo-600 hover:text-sky-800"
                 >
                   Change Contact
                 </button>
@@ -311,7 +311,7 @@ export default function CreateTicket() {
                   placeholder="Search contact by name or email..."
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
 
                 {contactResults.length > 0 && (
@@ -349,7 +349,7 @@ export default function CreateTicket() {
               placeholder="e.g. Plan Update for EMR"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all text-slate-800 placeholder:text-slate-400"
+              className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-slate-800 placeholder:text-slate-400"
             />
           </div>
 
@@ -364,7 +364,7 @@ export default function CreateTicket() {
                 required
                 value={ticketTypeId}
                 onChange={(e) => setTicketTypeId(e.target.value)}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
                   !ticketTypeId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
                 }`}
               >
@@ -388,7 +388,7 @@ export default function CreateTicket() {
                 required
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value)}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
                   !groupId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
                 }`}
               >
@@ -412,7 +412,7 @@ export default function CreateTicket() {
                 required
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
                   !priority ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
                 }`}
               >
@@ -437,7 +437,7 @@ export default function CreateTicket() {
                 value={agentId}
                 onChange={(e) => setAgentId(e.target.value)}
                 disabled={!groupId}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
                   !agentId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
                 } ${!groupId ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
               >
@@ -461,7 +461,7 @@ export default function CreateTicket() {
                 required
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-colors ${
+                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
                   !status ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
                 }`}
               >
@@ -483,7 +483,7 @@ export default function CreateTicket() {
               Description <span className="text-rose-500">*</span>
             </label>
 
-            <div className="border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 transition-all">
+            <div className="border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-indigo-500 transition-all">
               {/* Toolbar */}
               <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-center gap-2 text-slate-500 flex-wrap">
                 <span className="text-[11px] font-medium text-slate-700 flex items-center gap-1 cursor-pointer">
@@ -550,11 +550,11 @@ export default function CreateTicket() {
               onClick={() => fileInputRef.current?.click()}
               className="border-2 border-dashed border-slate-200 hover:border-sky-400 rounded-2xl p-6 text-center cursor-pointer bg-slate-50/50 hover:bg-sky-50/30 transition-all"
             >
-              <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mx-auto mb-2">
+              <div className="w-10 h-10 rounded-full bg-sky-100 text-indigo-600 flex items-center justify-center mx-auto mb-2">
                 <UploadCloud className="w-5 h-5" />
               </div>
               <p className="text-xs font-semibold text-slate-700">
-                Drag and drop files here, or <span className="text-sky-600 underline">click to browse</span>
+                Drag and drop files here, or <span className="text-indigo-600 underline">click to browse</span>
               </p>
               <p className="text-[10px] text-slate-400 mt-1">
                 Supported formats: PDF, DOC, DOCX, XLS, XLSX, PNG, JPG (Max 10 MB each)
@@ -592,7 +592,7 @@ export default function CreateTicket() {
                 type="checkbox"
                 checked={createAnother}
                 onChange={(e) => setCreateAnother(e.target.checked)}
-                className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500"
+                className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
               />
               <span>Create another ticket after this one</span>
             </label>
@@ -608,7 +608,7 @@ export default function CreateTicket() {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-5 py-2 bg-[#0284c7] hover:bg-sky-600 text-white rounded-xl text-xs font-bold shadow-md shadow-sky-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="px-5 py-2 bg-[#6366f1] hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {loading ? 'Creating...' : 'Create Ticket'}
               </button>

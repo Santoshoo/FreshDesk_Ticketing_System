@@ -208,18 +208,53 @@ export default function EmployeeEmailMaster() {
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'E';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const avatarColorMap = [
+    'bg-cyan-100 text-cyan-800',
+    'bg-purple-100 text-purple-800',
+    'bg-blue-100 text-blue-800',
+    'bg-rose-100 text-rose-800',
+    'bg-amber-100 text-amber-800',
+    'bg-emerald-100 text-emerald-800',
+  ];
+
+  const getAvatarColor = (name = '') => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return avatarColorMap[Math.abs(hash) % avatarColorMap.length];
+  };
+
+  const deptColorMap = [
+    'bg-[#fee2e2] text-[#ef4444]',
+    'bg-[#fef3c7] text-[#d97706]',
+    'bg-[#cffafe] text-[#0891b2]',
+    'bg-[#dcfce7] text-[#15803d]',
+    'bg-[#f3e8ff] text-[#7e22ce]',
+    'bg-[#e0f2fe] text-[#0284c7]',
+  ];
+
+  const getDepartmentColor = (name = '') => {
+    if (!name) return 'bg-slate-100 text-slate-600';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return deptColorMap[Math.abs(hash) % deptColorMap.length];
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      {/* Header */}
+    <div className="space-y-5 animate-in fade-in duration-200">
+      {/* Header matching User Master styling */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">Employee Email Master</h2>
-            <span className="px-2 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700 rounded-full border border-blue-200">
-              Admin Master Data
-            </span>
-          </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Employee Email Master</h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             Manage official hospital staff emails for unified ticket contact search and creation.
           </p>
         </div>
@@ -228,42 +263,42 @@ export default function EmployeeEmailMaster() {
           <button
             onClick={() => fetchEmails(pagination.page)}
             disabled={loading}
-            className="p-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-slate-600 transition-colors shadow-2xs"
+            className="p-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-slate-600 transition-colors shadow-2xs cursor-pointer"
             title="Refresh"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-600' : ''}`} />
           </button>
 
           <button
             onClick={() => setIsBulkModalOpen(true)}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98] cursor-pointer"
+            className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-xl shadow-xs text-xs transition-all active:scale-[0.98] cursor-pointer"
             title="Bulk upload employee emails via Excel (.xlsx) or CSV"
           >
-            <Upload className="w-4 h-4" />
+            <Upload className="w-3.5 h-3.5" />
             <span>Bulk Upload</span>
           </button>
 
           <button
             onClick={openCreateModal}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98] cursor-pointer"
+            className="flex items-center gap-1.5 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-xs text-xs transition-all active:scale-[0.98] cursor-pointer"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Add Employee Email</span>
           </button>
         </div>
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Search */}
         <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search employee name, email or department..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
 
@@ -273,7 +308,7 @@ export default function EmployeeEmailMaster() {
           <select
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700"
+            className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none text-slate-700 font-medium"
           >
             <option value="">All Departments</option>
             {departments.map((d) => (
@@ -287,7 +322,7 @@ export default function EmployeeEmailMaster() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700"
+            className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none text-slate-700 font-medium"
           >
             <option value="">All Statuses</option>
             <option value="ACTIVE">Active Only</option>
@@ -296,12 +331,12 @@ export default function EmployeeEmailMaster() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+      {/* Table matching User Master styling */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
         {loading ? (
           <div className="py-16 text-center">
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            <p className="text-xs text-slate-400">Loading employee emails from database...</p>
+            <p className="text-xs text-slate-400 font-medium">Loading employee emails...</p>
           </div>
         ) : emails.length === 0 ? (
           <EmptyState
@@ -315,7 +350,7 @@ export default function EmployeeEmailMaster() {
             action={
               <button
                 onClick={openCreateModal}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer"
               >
                 Add First Email
               </button>
@@ -325,15 +360,15 @@ export default function EmployeeEmailMaster() {
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/60">
+                <thead className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/70 text-[11px]">
                   <tr>
-                    <th className="px-5 py-3">#</th>
-                    <th className="px-5 py-3">Employee Name</th>
-                    <th className="px-5 py-3">Email Address</th>
-                    <th className="px-5 py-3">Department</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3">Created</th>
-                    <th className="px-5 py-3 text-right">Actions</th>
+                    <th className="px-5 py-3.5">#</th>
+                    <th className="px-5 py-3.5">Employee Name</th>
+                    <th className="px-5 py-3.5">Email Address</th>
+                    <th className="px-5 py-3.5">Department</th>
+                    <th className="px-5 py-3.5">Status</th>
+                    <th className="px-5 py-3.5">Created</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -341,56 +376,67 @@ export default function EmployeeEmailMaster() {
                     const rowNumber = (pagination.page - 1) * pagination.pageSize + idx + 1;
                     return (
                       <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-5 py-3 text-slate-400 font-mono text-[11px]">{rowNumber}</td>
-                        <td className="px-5 py-3 font-semibold text-slate-900">
-                          {item.name || <span className="text-slate-400 font-normal italic">Not specified</span>}
-                        </td>
-                        <td className="px-5 py-3 font-medium text-slate-800">
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                            <span>{item.email}</span>
+                        <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">{rowNumber}</td>
+                        {/* Employee Name with Avatar Initials */}
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${getAvatarColor(
+                                item.name || item.email
+                              )}`}
+                            >
+                              {getInitials(item.name || item.email)}
+                            </div>
+                            <span className="font-bold text-slate-800">
+                              {item.name || <span className="text-slate-400 font-normal italic">Not specified</span>}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-5 py-3 text-slate-600">
+                        <td className="px-5 py-3.5 text-slate-600 font-medium">{item.email}</td>
+                        {/* Department Soft Pill Badge */}
+                        <td className="px-5 py-3.5">
                           {item.department ? (
-                            <span className="inline-flex items-center gap-1 text-slate-700">
-                              <Building2 className="w-3 h-3 text-slate-400" />
-                              <span>{item.department.name}</span>
+                            <span
+                              className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${getDepartmentColor(
+                                item.department.name
+                              )}`}
+                            >
+                              {item.department.name}
                             </span>
                           ) : (
                             <span className="text-slate-400 italic">None</span>
                           )}
                         </td>
-                        <td className="px-5 py-3">
-                          {item.isActive ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                              ACTIVE
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                              INACTIVE
-                            </span>
-                          )}
+                        {/* Status Soft Pill Badge */}
+                        <td className="px-5 py-3.5">
+                          <span
+                            className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${
+                              item.isActive
+                                ? 'bg-[#dcfce7] text-[#15803d]'
+                                : 'bg-[#f1f5f9] text-[#64748b]'
+                            }`}
+                          >
+                            {item.isActive ? 'ACTIVE' : 'INACTIVE'}
+                          </span>
                         </td>
-                        <td className="px-5 py-3 text-slate-500 whitespace-nowrap">
+                        <td className="px-5 py-3.5 text-slate-500 font-medium whitespace-nowrap">
                           {new Date(item.createdAt).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
                           })}
                         </td>
-                        <td className="px-5 py-3 text-right whitespace-nowrap">
+                        <td className="px-5 py-3.5 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
                             {/* Activate / Deactivate Button */}
                             <button
                               onClick={() => setStatusTarget(item)}
                               title={item.isActive ? 'Deactivate Email' : 'Activate Email'}
-                              className={`p-1 rounded transition-colors ${item.isActive
+                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                item.isActive
                                   ? 'text-amber-500 hover:bg-amber-50'
                                   : 'text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                              }`}
                             >
                               {item.isActive ? (
                                 <XCircle className="w-3.5 h-3.5" />
@@ -403,7 +449,7 @@ export default function EmployeeEmailMaster() {
                             <button
                               onClick={() => openEditModal(item)}
                               title="Edit Email"
-                              className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
@@ -412,7 +458,7 @@ export default function EmployeeEmailMaster() {
                             <button
                               onClick={() => setDeleteTarget(item)}
                               title="Delete Record"
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

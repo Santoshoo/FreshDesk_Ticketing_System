@@ -6,7 +6,7 @@ export const dashboardApi = {
     return res.data;
   },
 
-  getRecentTickets: async (scope, limit = 5) => {
+  getRecentTickets: async (scope, limit = 8) => {
     const res = await api.get('/dashboard/recent-tickets', { params: { scope, limit } });
     return res.data;
   },

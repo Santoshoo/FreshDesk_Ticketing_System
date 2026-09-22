@@ -89,12 +89,60 @@ export default function Agents() {
     }
   };
 
+  const getInitials = (name) => {
+    if (!name) return 'A';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const avatarColorMap = [
+    'bg-cyan-100 text-cyan-800',
+    'bg-purple-100 text-purple-800',
+    'bg-blue-100 text-blue-800',
+    'bg-rose-100 text-rose-800',
+    'bg-amber-100 text-amber-800',
+    'bg-emerald-100 text-emerald-800',
+  ];
+
+  const getAvatarColor = (name = '') => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return avatarColorMap[Math.abs(hash) % avatarColorMap.length];
+  };
+
+  const deptColorMap = [
+    'bg-[#fee2e2] text-[#ef4444]',
+    'bg-[#fef3c7] text-[#d97706]',
+    'bg-[#cffafe] text-[#0891b2]',
+    'bg-[#dcfce7] text-[#15803d]',
+    'bg-[#f3e8ff] text-[#7e22ce]',
+    'bg-[#e0f2fe] text-[#0284c7]',
+  ];
+
+  const getDepartmentColor = (name = '') => {
+    if (!name) return 'bg-slate-100 text-slate-600';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return deptColorMap[Math.abs(hash) % deptColorMap.length];
+  };
+
+  const getRoleBadgeColor = (roleName = '') => {
+    const r = (roleName || '').toUpperCase();
+    if (r.includes('ADMIN')) return 'bg-[#f3e8ff] text-[#7e22ce]';
+    if (r.includes('AGENT')) return 'bg-[#e0f2fe] text-[#0284c7]';
+    return 'bg-[#f1f5f9] text-[#475569]';
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-in fade-in duration-200">
+      {/* Header matching User Master */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Agent Group Mapping</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Agent Groups</h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             Designate users as support agents and map them to their authorized support groups.
           </p>
         </div>
@@ -106,31 +154,33 @@ export default function Agents() {
             if (firstAvailable) openConfigModal(firstAvailable);
           }}
           disabled={allUsers.length === 0}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98] disabled:opacity-50"
+          className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-xs text-xs transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
         >
-          <UserCheck className="w-4 h-4" />
+          <UserCheck className="w-4 h-4 stroke-[2.5]" />
           <span>Configure Agent</span>
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+      {/* Search Bar */}
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div className="relative max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search agents by name, email, employee ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-visible" ref={dropdownRef}>
+      {/* Agents Table matching User Master */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden" ref={dropdownRef}>
         {loading ? (
           <div className="py-16 text-center">
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            <p className="text-xs text-slate-400">Loading agents...</p>
+            <p className="text-xs text-slate-400 font-medium">Loading agents...</p>
           </div>
         ) : agents.length === 0 ? (
           <EmptyState
@@ -139,36 +189,63 @@ export default function Agents() {
             description="No users have been configured as support agents yet. Click Configure Agent to assign groups to a user."
           />
         ) : (
-          <div className="overflow-x-auto overflow-y-visible">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/60">
+              <thead className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/70 text-[11px]">
                 <tr>
-                  <th className="px-5 py-3">Agent Name</th>
-                  <th className="px-5 py-3">Email</th>
-                  <th className="px-5 py-3">Department</th>
-                  <th className="px-5 py-3">Role</th>
-                  <th className="px-5 py-3">Assigned Groups</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                  <th className="px-5 py-3.5">Agent Name</th>
+                  <th className="px-5 py-3.5">Email</th>
+                  <th className="px-5 py-3.5">Department</th>
+                  <th className="px-5 py-3.5">Role</th>
+                  <th className="px-5 py-3.5">Assigned Groups</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {agents.map((a) => (
                   <tr key={a.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-3.5 font-bold text-slate-800">{a.name}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{a.email}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{a.department?.name || '-'}</td>
+                    {/* Agent Name with circular avatar initials */}
                     <td className="px-5 py-3.5">
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${getAvatarColor(
+                            a.name
+                          )}`}
+                        >
+                          {getInitials(a.name)}
+                        </div>
+                        <span className="font-bold text-slate-800">{a.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-600 font-medium">{a.email}</td>
+                    {/* Department Soft Pill Badge */}
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${getDepartmentColor(
+                          a.department?.name
+                        )}`}
+                      >
+                        {a.department?.name || '-'}
+                      </span>
+                    </td>
+                    {/* Role Soft Pill Badge */}
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${getRoleBadgeColor(
+                          a.role?.name
+                        )}`}
+                      >
                         {a.role?.name}
                       </span>
                     </td>
+                    {/* Assigned Groups as Soft Pill Badges */}
                     <td className="px-5 py-3.5">
                       {a.groups && a.groups.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1.5">
                           {a.groups.map((g) => (
                             <span
                               key={g.id}
-                              className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-[10px] font-semibold border border-slate-200"
+                              className="px-2.5 py-0.5 bg-[#e0f2fe] text-[#0284c7] rounded-full text-[10px] font-bold"
                             >
                               {g.name}
                             </span>
@@ -178,58 +255,37 @@ export default function Agents() {
                         <span className="text-slate-400 italic text-[11px]">No groups assigned</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-right relative">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveDropdownId(activeDropdownId === a.id ? null : a.id);
-                        }}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors inline-flex items-center justify-center"
-                        title="Actions"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-
-                      {activeDropdownId === a.id && (
-                        <div className="absolute right-5 top-10 w-44 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-30 text-left divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
-                          <div className="py-1">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveDropdownId(null);
-                                openConfigModal(a);
-                              }}
-                              className="w-full px-3.5 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2.5 transition-colors"
-                            >
-                              <FolderKanban className="w-3.5 h-3.5 text-blue-500" />
-                              <span>Assign Groups</span>
-                            </button>
-                          </div>
-                          {a.groups && a.groups.length > 0 && (
-                            <div className="py-1">
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  setActiveDropdownId(null);
-                                  if (window.confirm(`Remove all assigned groups for ${a.name}?`)) {
-                                    try {
-                                      await agentApi.updateAgentGroups(a.id, [], false);
-                                      fetchData();
-                                    } catch (err) {
-                                      alert(err.response?.data?.error?.message || err.message);
-                                    }
-                                  }
-                                }}
-                                className="w-full px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors"
-                              >
-                                <AlertCircle className="w-3.5 h-3.5 text-rose-500" />
-                                <span>Clear Groups</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                    {/* Actions */}
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openConfigModal(a)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          title="Assign Groups"
+                        >
+                          <FolderKanban className="w-3.5 h-3.5" />
+                        </button>
+                        {a.groups && a.groups.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (window.confirm(`Remove all assigned groups for ${a.name}?`)) {
+                                try {
+                                  await agentApi.updateAgentGroups(a.id, [], false);
+                                  fetchData();
+                                } catch (err) {
+                                  alert(err.response?.data?.error?.message || err.message);
+                                }
+                              }
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Remove All Groups"
+                          >
+                            <Shield className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

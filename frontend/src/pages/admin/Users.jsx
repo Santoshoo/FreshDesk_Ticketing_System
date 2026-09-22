@@ -285,46 +285,93 @@ export default function Users() {
     (d.name || '').toLowerCase().includes(deptSearchQuery.toLowerCase().trim())
   );
 
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const avatarColorMap = [
+    'bg-cyan-100 text-cyan-800',
+    'bg-purple-100 text-purple-800',
+    'bg-blue-100 text-blue-800',
+    'bg-rose-100 text-rose-800',
+    'bg-amber-100 text-amber-800',
+    'bg-emerald-100 text-emerald-800',
+  ];
+
+  const getAvatarColor = (name = '') => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return avatarColorMap[Math.abs(hash) % avatarColorMap.length];
+  };
+
+  const deptColorMap = [
+    'bg-[#fee2e2] text-[#ef4444]',
+    'bg-[#fef3c7] text-[#d97706]',
+    'bg-[#cffafe] text-[#0891b2]',
+    'bg-[#dcfce7] text-[#15803d]',
+    'bg-[#f3e8ff] text-[#7e22ce]',
+    'bg-[#e0f2fe] text-[#0284c7]',
+  ];
+
+  const getDepartmentColor = (name = '') => {
+    if (!name) return 'bg-slate-100 text-slate-600';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return deptColorMap[Math.abs(hash) % deptColorMap.length];
+  };
+
+  const getRoleBadgeColor = (roleName = '') => {
+    const r = (roleName || '').toUpperCase();
+    if (r.includes('ADMIN')) return 'bg-[#f3e8ff] text-[#7e22ce]';
+    if (r.includes('AGENT')) return 'bg-[#e0f2fe] text-[#0284c7]';
+    return 'bg-[#f1f5f9] text-[#475569]';
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-5 animate-in fade-in duration-200">
+      {/* Header matching Admin Master Data Page */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">User Master</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">User Master</h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             Manage hospital staff, accounts, and assign roles.
           </p>
         </div>
 
         <button
           onClick={openCreateModal}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98]"
+          className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-xs text-xs transition-all active:scale-[0.98] cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Add User</span>
         </button>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div className="relative max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search users by name, email, employee ID..."
+            placeholder="Search users..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-visible" ref={dropdownRef}>
+      {/* Users Table matching Admin Master Data Page */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden" ref={dropdownRef}>
         {loading ? (
           <div className="py-16 text-center">
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            <p className="text-xs text-slate-400">Loading users from database...</p>
+            <p className="text-xs text-slate-400 font-medium">Loading users...</p>
           </div>
         ) : users.length === 0 ? (
           <EmptyState
@@ -334,88 +381,106 @@ export default function Users() {
             action={
               <button
                 onClick={openCreateModal}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer"
               >
                 Add First User
               </button>
             }
           />
         ) : (
-          <div className="overflow-x-auto overflow-y-visible">
+          <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/60">
+              <thead className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/70 text-[11px]">
                 <tr>
-                  <th className="px-5 py-3">Name</th>
-                  <th className="px-5 py-3">Email</th>
-                  <th className="px-5 py-3">Employee ID</th>
-                  <th className="px-5 py-3">Department</th>
-                  <th className="px-5 py-3">Role</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                  <th className="px-5 py-3.5">Name</th>
+                  <th className="px-5 py-3.5">Email</th>
+                  <th className="px-5 py-3.5">Employee ID</th>
+                  <th className="px-5 py-3.5">Department</th>
+                  <th className="px-5 py-3.5">Role</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {users.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-3.5 font-bold text-slate-800">{u.name}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{u.email}</td>
-                    <td className="px-5 py-3.5 font-mono text-slate-700">{u.employeeId}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{u.department?.name || '-'}</td>
+                    {/* Name with Avatar Initials */}
                     <td className="px-5 py-3.5">
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                        {u.role?.name}
-                      </span>
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${getAvatarColor(
+                            u.name
+                          )}`}
+                        >
+                          {getInitials(u.name)}
+                        </div>
+                        <span className="font-bold text-slate-800">{u.name}</span>
+                      </div>
                     </td>
+
+                    {/* Email */}
+                    <td className="px-5 py-3.5 text-slate-600 font-medium">{u.email}</td>
+
+                    {/* Employee ID */}
+                    <td className="px-5 py-3.5 font-mono text-slate-700 text-[11px]">
+                      {u.employeeId || '-'}
+                    </td>
+
+                    {/* Department Soft Pill Badge */}
                     <td className="px-5 py-3.5">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${getDepartmentColor(
+                          u.department?.name
+                        )}`}
+                      >
+                        {u.department?.name || 'General'}
+                      </span>
+                    </td>
+
+                    {/* Role Soft Pill Badge */}
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${getRoleBadgeColor(
+                          u.role?.name
+                        )}`}
+                      >
+                        {u.role?.name || 'USER'}
+                      </span>
+                    </td>
+
+                    {/* Status Soft Pill Badge */}
+                    <td className="px-5 py-3.5">
+                      <span
+                        className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${
                           u.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-slate-100 text-slate-500'
+                            ? 'bg-[#dcfce7] text-[#15803d]'
+                            : 'bg-[#f1f5f9] text-[#64748b]'
                         }`}
                       >
                         {u.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-right relative">
-                      {/* 3-Dot Action Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveDropdownId(activeDropdownId === u.id ? null : u.id);
-                        }}
-                        className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors inline-flex items-center justify-center"
-                        title="Actions"
-                      >
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
 
-                      {/* 3-Dot Dropdown Menu */}
-                      {activeDropdownId === u.id && (
-                        <div className="absolute right-5 top-10 w-36 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-30 text-left divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
-                          <div className="py-1">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(u)}
-                              className="w-full px-3.5 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2.5 transition-colors"
-                            >
-                              <Edit2 className="w-3.5 h-3.5 text-blue-500" />
-                              <span>Edit User</span>
-                            </button>
-                          </div>
-                          <div className="py-1">
-                            <button
-                              type="button"
-                              onClick={() => openDeleteModal(u)}
-                              className="w-full px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 transition-colors font-medium"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                              <span>Delete User</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                    {/* Actions matching Screenshot: Edit + Delete icons */}
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(u)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                          title="Edit User"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openDeleteModal(u)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Delete User"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

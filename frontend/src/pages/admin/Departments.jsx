@@ -77,43 +77,62 @@ export default function Departments() {
     }
   };
 
+  const deptColorMap = [
+    'bg-[#fee2e2] text-[#ef4444]',
+    'bg-[#fef3c7] text-[#d97706]',
+    'bg-[#cffafe] text-[#0891b2]',
+    'bg-[#dcfce7] text-[#15803d]',
+    'bg-[#f3e8ff] text-[#7e22ce]',
+    'bg-[#e0f2fe] text-[#0284c7]',
+  ];
+
+  const getDepartmentColor = (name = '') => {
+    if (!name) return 'bg-slate-100 text-slate-600';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return deptColorMap[Math.abs(hash) % deptColorMap.length];
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 animate-in fade-in duration-200">
+      {/* Header matching User Master */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Department Master</h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Department Master</h2>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
             Configure hospital departments (e.g. ICT, HR, Radiology, Finance).
           </p>
         </div>
 
         <button
           onClick={openCreateModal}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-3.5 rounded-lg shadow-sm text-xs transition-all active:scale-[0.98]"
+          className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-xs text-xs transition-all active:scale-[0.98] cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Add Department</span>
         </button>
       </div>
 
-      <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
+      {/* Search Bar */}
+      <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs">
         <div className="relative max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search departments..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 transition-colors"
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-2xs overflow-hidden">
+      {/* Departments Table matching User Master */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
         {loading ? (
           <div className="py-16 text-center">
             <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-            <p className="text-xs text-slate-400">Loading departments...</p>
+            <p className="text-xs text-slate-400 font-medium">Loading departments...</p>
           </div>
         ) : departments.length === 0 ? (
           <EmptyState
@@ -123,7 +142,7 @@ export default function Departments() {
             action={
               <button
                 onClick={openCreateModal}
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors cursor-pointer"
               >
                 Add First Department
               </button>
@@ -132,36 +151,56 @@ export default function Departments() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/80 text-slate-600 font-semibold border-b border-slate-200/60">
+              <thead className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/70 text-[11px]">
                 <tr>
-                  <th className="px-5 py-3">Department Name</th>
-                  <th className="px-5 py-3">Description</th>
-                  <th className="px-5 py-3">Users</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
+                  <th className="px-5 py-3.5">Department Name</th>
+                  <th className="px-5 py-3.5">Description</th>
+                  <th className="px-5 py-3.5">Users</th>
+                  <th className="px-5 py-3.5">Status</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {departments.map((d) => (
                   <tr key={d.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-5 py-3.5 font-bold text-slate-800">{d.name}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{d.description || '-'}</td>
-                    <td className="px-5 py-3.5 text-slate-600">{d._count?.users ?? 0} members</td>
+                    {/* Department Name with soft color icon */}
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-[10px] shrink-0 ${getDepartmentColor(
+                            d.name
+                          )}`}
+                        >
+                          <Building2 className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="font-bold text-slate-800">{d.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3.5 text-slate-600 font-medium">{d.description || '-'}</td>
+                    {/* Users Soft Pill Badge */}
+                    <td className="px-5 py-3.5">
+                      <span className="inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold bg-[#e0f2fe] text-[#0284c7]">
+                        {d._count?.users ?? 0} members
+                      </span>
+                    </td>
+                    {/* Status Soft Pill Badge */}
                     <td className="px-5 py-3.5">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                        className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${
                           d.status === 'ACTIVE'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : 'bg-slate-100 text-slate-500'
+                            ? 'bg-[#dcfce7] text-[#15803d]'
+                            : 'bg-[#f1f5f9] text-[#64748b]'
                         }`}
                       >
                         {d.status}
                       </span>
                     </td>
+                    {/* Actions */}
                     <td className="px-5 py-3.5 text-right">
                       <button
                         onClick={() => openEditModal(d)}
-                        className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                        title="Edit Department"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>

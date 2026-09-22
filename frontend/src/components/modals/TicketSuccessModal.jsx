@@ -73,7 +73,7 @@ export default function TicketSuccessModal({
              onClick={handleCopyId}
              title="Click to copy Ticket ID">
           <span className="text-xs font-semibold text-slate-400">Ticket ID:</span>
-          <span className="text-base font-black text-[#0284c7] tracking-wider font-mono">
+          <span className="text-base font-black text-[#6366f1] tracking-wider font-mono">
             #{ticket.ticketNumber}
           </span>
           <button
@@ -121,7 +121,7 @@ export default function TicketSuccessModal({
           <button
             type="button"
             onClick={onViewTicket}
-            className="w-full py-2.5 px-4 bg-gradient-to-r from-[#0284c7] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] active:scale-[0.99] text-white text-xs font-bold rounded-xl shadow-md shadow-sky-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-2.5 px-4 bg-gradient-to-r from-[#6366f1] to-[#0369a1] hover:from-[#0369a1] hover:to-[#075985] active:scale-[0.99] text-white text-xs font-bold rounded-xl shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>View Ticket Details</span>
             <ArrowRight className="w-4 h-4" />

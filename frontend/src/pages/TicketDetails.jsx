@@ -16,6 +16,10 @@ import {
   XCircle,
   MoreVertical,
   X,
+  ChevronDown,
+  Bold,
+  Italic,
+  List,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -256,7 +260,7 @@ export default function TicketDetails() {
   if (loading && !ticket) {
     return (
       <div className="py-24 text-center">
-        <div className="w-8 h-8 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
         <p className="text-xs text-slate-400">Loading ticket #{id}...</p>
       </div>
     );
@@ -269,7 +273,7 @@ export default function TicketDetails() {
         <p className="mt-1">{error || 'Ticket not found.'}</p>
         <button
           onClick={() => navigate('/tickets')}
-          className="mt-3 inline-flex items-center gap-1.5 font-semibold text-sky-600 hover:underline"
+          className="mt-3 inline-flex items-center gap-1.5 font-semibold hover:underline" style={{ color: '#6366f1' }}
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to All Tickets
         </button>
@@ -281,75 +285,117 @@ export default function TicketDetails() {
   const isHigh = priority === 'HIGH' || priority === 'URGENT';
   const isLow = priority === 'LOW';
 
+  const formatRelativeTime = (dateStr) => {
+    if (!dateStr) return '';
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHrs = Math.floor(diffMin / 60);
+    if (diffHrs < 24) return `${diffHrs} hour${diffHrs > 1 ? 's' : ''} ago`;
+    const diffDays = Math.floor(diffHrs / 24);
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
   return (
-    <div className="space-y-4 max-w-6xl mx-auto pb-12 animate-in fade-in duration-150">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-        <Link to="/tickets" className="hover:text-slate-600 transition-colors">
-          All Tickets
+    <div className="space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-200">
+      {/* ── Breadcrumb matching Screenshot 2 ── */}
+      <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+        <Link to="/tickets" className="hover:text-slate-700 transition-colors">
+          Tickets
         </Link>
         <span>&gt;</span>
-        <span className="text-slate-700 font-semibold">#{ticket.ticketNumber}</span>
+        <span className="font-mono text-slate-700 font-bold">#{ticket.ticketNumber}</span>
+        <span>&gt;</span>
+        <span className="text-slate-500 truncate max-w-xs">{ticket.subject}</span>
       </div>
 
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-200">
-        <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight">
-            #{ticket.ticketNumber} {ticket.subject}
-          </h2>
-
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${ticket.status === 'OPEN'
-                ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                : ticket.status === 'PENDING' || ticket.status === 'IN_PROGRESS'
-                  ? 'bg-amber-50 text-amber-600 border border-amber-200'
-                  : ticket.status === 'RESOLVED'
-                    ? 'bg-sky-50 text-sky-600 border border-sky-200'
-                    : 'bg-slate-100 text-slate-600 border border-slate-200'
+      {/* ── Top Header Row (Title, Badges & Action Buttons matching Screenshot 2) ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-slate-200/80">
+        <div className="space-y-1.5 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-snug">
+            {ticket.subject}
+          </h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Priority Badge */}
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                isHigh
+                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                  : isLow
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200'
               }`}
-          >
-            {ticket.status === 'OPEN'
-              ? '🟢 Open'
-              : ticket.status === 'PENDING'
-                ? '🟡 Pending'
-                : ticket.status === 'IN_PROGRESS'
-                  ? '🔵 In Progress'
-                  : ticket.status === 'RESOLVED'
-                    ? '✅ Resolved'
-                    : '⚪ Closed'}
-          </span>
+            >
+              {priority}
+            </span>
 
-          {/* EDIT OPTION RIGHT SIDE OF STATUS */}
+            {/* Status Badge */}
+            <span
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                ticket.status === 'OPEN'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : ticket.status === 'PENDING'
+                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                  : ticket.status === 'IN_PROGRESS'
+                  ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                  : ticket.status === 'RESOLVED'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+              }`}
+            >
+              {ticket.status}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Buttons: Edit Status (dark navy), Resolve, Close, Delete */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
           {canEditTicket(user, ticket) && (
             <button
               type="button"
               onClick={openEditPropertiesModal}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white rounded-xl shadow-xs transition-all cursor-pointer hover:opacity-95 active:scale-95"
+              style={{ background: '#1e1b4b' }}
               title="Edit ticket status, type, group, and agent"
             >
-              <Edit2 className="w-3.5 h-3.5 text-sky-600" />
-              <span>Edit</span>
+              <span>Edit Status</span>
+              <ChevronDown className="w-3.5 h-3.5 text-indigo-300" />
             </button>
           )}
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
+          {ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED' && canEditTicket(user, ticket) && (
+            <button
+              type="button"
+              onClick={() => handleOpenCloseModal('RESOLVED')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-xl text-xs font-bold shadow-2xs transition-all cursor-pointer"
+            >
+              <span>Resolve</span>
+            </button>
+          )}
+
           {ticket.status !== 'CLOSED' && canEditTicket(user, ticket) && (
             <button
+              type="button"
               onClick={() => handleOpenCloseModal('CLOSED')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
-              title="Close and archive ticket"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
             >
-              <span>Close Ticket</span>
+              <span>Close</span>
             </button>
           )}
 
           {canDeleteTicket(user, ticket) && (
             <button
+              type="button"
               onClick={() => setIsDeleteModalOpen(true)}
-              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+              className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
               title="Delete Ticket"
             >
               <Trash2 className="w-4 h-4" />
@@ -358,310 +404,349 @@ export default function TicketDetails() {
         </div>
       </div>
 
-      {/* Main Split Layout: Left Metadata Panel, Right Conversation Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left Metadata Panel (1/3) */}
+      {/* ── Main Two-Column Split Layout matching Screenshot 2 ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* ── Left Column: Conversation Thread & Composer (approx 66% width) ── */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Card 1: Original Ticket Message (Requester) */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center font-bold text-xs shrink-0">
+                  {ticket.contact?.name?.[0]?.toUpperCase() || ticket.creator?.name?.[0]?.toUpperCase() || 'R'}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs font-bold text-slate-900 leading-tight">
+                    {ticket.contact?.name || ticket.creator?.name || 'Requester'}
+                  </p>
+                  <span className="text-[11px] text-slate-300">·</span>
+                  <p className="text-[11px] text-slate-400 font-medium">
+                    {formatRelativeTime(ticket.createdAt)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line pt-1">
+              {ticket.description}
+            </p>
+
+            {/* Attachments */}
+            {ticket.attachments && Array.isArray(ticket.attachments) && ticket.attachments.length > 0 && (
+              <div className="pt-2 flex flex-wrap gap-2 border-t border-slate-100">
+                {ticket.attachments.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 shadow-2xs"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span className="font-semibold">{file.name}</span>
+                    {file.size && <span className="text-[10px] text-slate-400">{file.size}</span>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Cards 2..N: Comments Thread */}
+          {ticket.comments && ticket.comments.map((c) => {
+            const isAgentComment =
+              c.user?.role === 'AGENT' ||
+              c.user?.role === 'ADMIN' ||
+              c.user?.role === 'SUPER_ADMIN';
+            const isInternal = c.commentType === 'INTERNAL_NOTE';
+
+            // Agent card = blue tinted card (matching Screenshot 2), Internal = amber, User = white
+            const cardStyle = isInternal
+              ? { background: '#fffbeb', border: '1px solid #fde68a' }
+              : isAgentComment
+              ? { background: '#f0f7ff', border: '1px solid #bfdbfe' }
+              : { background: '#ffffff', border: '1px solid #e2e8f0' };
+
+            const avatarBg = isInternal
+              ? 'bg-amber-100 text-amber-800'
+              : isAgentComment
+              ? 'bg-blue-600 text-white'
+              : 'bg-slate-700 text-white';
+
+            return (
+              <div
+                key={c.id}
+                className="rounded-2xl p-5 shadow-2xs space-y-2.5 transition-all"
+                style={cardStyle}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${avatarBg}`}>
+                      {c.user?.name?.[0]?.toUpperCase() || 'S'}
+                    </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-xs font-bold text-slate-900 leading-tight">
+                          {c.user?.name || 'Staff User'}
+                        </p>
+                        <span className="text-[11px] text-slate-300">·</span>
+                        <p className="text-[11px] text-slate-400 font-medium">
+                          {formatRelativeTime(c.createdAt)}
+                        </p>
+                        {isInternal && (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-200/70 text-amber-800 ml-1">
+                            Internal Note
+                          </span>
+                        )}
+                      </div>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line pt-1">
+                  {c.body}
+                </p>
+              </div>
+            );
+          })}
+
+          {/* Composer Box (Matching Screenshot 2) */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 space-y-3">
+            {/* Formatting Toolbar */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1 text-slate-500">
+                <button
+                  type="button"
+                  onClick={() => setCommentText((prev) => prev + '**bold**')}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 font-bold text-xs cursor-pointer"
+                  title="Bold"
+                >
+                  <Bold className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCommentText((prev) => prev + '*italic*')}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 italic text-xs cursor-pointer"
+                  title="Italic"
+                >
+                  <Italic className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCommentText((prev) => prev + '\n- ')}
+                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 text-xs cursor-pointer"
+                  title="Bullet List"
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Mode Selector: Reply vs Internal Note */}
+              <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setComposerMode('REPLY')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    composerMode === 'REPLY'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Reply
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setComposerMode('INTERNAL_NOTE')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    composerMode === 'INTERNAL_NOTE'
+                      ? 'bg-amber-500 text-white shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  Internal Note
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSendReply}>
+              <textarea
+                rows={3}
+                placeholder={
+                  composerMode === 'INTERNAL_NOTE'
+                    ? 'Write an internal note (only visible to staff & agents)...'
+                    : 'Type a reply to the requester...'
+                }
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                className="w-full text-xs text-slate-800 placeholder:text-slate-400 border-0 focus:outline-none resize-none p-1 bg-transparent min-h-[70px]"
+              />
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Attach file">
+                    <Paperclip className="w-4 h-4" />
+                  </button>
+                  <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Add link">
+                    <Link2 className="w-4 h-4" />
+                  </button>
+                  <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Emoji">
+                    <Smile className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingComment || !commentText.trim()}
+                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-40 cursor-pointer text-white hover:opacity-95 active:scale-95"
+                  style={{
+                    background: composerMode === 'INTERNAL_NOTE' ? '#d97706' : '#1e1b4b',
+                  }}
+                >
+                  <span>{composerMode === 'INTERNAL_NOTE' ? 'Add Note' : 'Add Reply'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        {/* ── Right Column: Properties Panel (Ticket Info, Requester, Activity Timeline) ── */}
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-4 text-xs">
-            <div className="space-y-3 divide-y divide-slate-100">
-              {/* Type */}
-              <div className="flex justify-between py-1">
-                <span className="text-slate-400">Type</span>
+          {/* Card 1: Ticket Info */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-3">
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+              Ticket Info
+            </h3>
+            <div className="space-y-2.5 divide-y divide-slate-100 text-xs">
+              <div className="flex items-center justify-between py-1">
+                <span className="text-slate-400 font-medium">ID</span>
+                <span className="font-mono font-bold text-slate-800">#{ticket.ticketNumber}</span>
+              </div>
+              <div className="flex items-center justify-between pt-2.5">
+                <span className="text-slate-400 font-medium">Type</span>
                 <span className="font-semibold text-slate-800">
                   {ticket.ticketType?.name || 'Support'}
                 </span>
               </div>
-
-              {/* Group */}
-              <div className="flex justify-between pt-2">
-                <span className="text-slate-400">Group</span>
-                <span className="font-semibold text-slate-800">
-                  {ticket.group?.name || 'EMR Support'}
+              <div className="flex items-center justify-between pt-2.5">
+                <span className="text-slate-400 font-medium">Priority</span>
+                <span
+                  className={`font-bold ${
+                    isHigh ? 'text-rose-600' : isLow ? 'text-emerald-600' : 'text-amber-600'
+                  }`}
+                >
+                  {priority}
                 </span>
               </div>
-
-              {/* Priority */}
-              <div className="flex justify-between pt-2">
-                <span className="text-slate-400">Priority</span>
-                <span className="font-bold flex items-center gap-1">
-                  <span className={`w-2 h-2 rounded-full ${isHigh ? 'bg-rose-500' : isLow ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                  <span className={isHigh ? 'text-rose-600' : isLow ? 'text-emerald-600' : 'text-amber-600'}>
-                    {isHigh ? 'High' : isLow ? 'Low' : 'Medium'}
-                  </span>
-                </span>
-              </div>
-
-              {/* Assigned To */}
-              <div className="flex justify-between pt-2">
-                <span className="text-slate-400">Assigned To</span>
+              <div className="flex items-center justify-between pt-2.5">
+                <span className="text-slate-400 font-medium">Assigned Agent</span>
                 <span className="font-semibold text-slate-800">
                   {ticket.agent?.name || 'Unassigned'}
                 </span>
               </div>
-
-              {/* Created By */}
-              <div className="flex justify-between pt-2">
-                <span className="text-slate-400">Created By</span>
+              <div className="flex items-center justify-between pt-2.5">
+                <span className="text-slate-400 font-medium">Group</span>
                 <span className="font-semibold text-slate-800">
-                  {ticket.creator?.name || ticket.contact?.name || 'Staff User'}
-                </span>
-              </div>
-
-              {/* Created At */}
-              <div className="flex justify-between pt-2">
-                <span className="text-slate-400">Created At</span>
-                <span className="font-mono text-slate-600">
-                  {new Date(ticket.createdAt).toLocaleDateString('en-US', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </div>
-
-              {/* Updated At */}
-              <div className="flex justify-between pt-2">
-                <span className="text-slate-400">Updated At</span>
-                <span className="font-mono text-slate-600">
-                  {new Date(ticket.updatedAt).toLocaleDateString('en-US', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {ticket.group?.name || 'Clinical Systems Support'}
                 </span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Conversation Panel (2/3) */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* Sub Tabs: Conversation vs History */}
-          <div className="flex items-center gap-6 border-b border-slate-200 text-xs font-semibold text-slate-500">
-            <button
-              onClick={() => setActiveTab('conversation')}
-              className={`pb-2 transition-colors relative ${activeTab === 'conversation' ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
-                }`}
-            >
-              Conversation
-              {activeTab === 'conversation' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0284c7] rounded-full"></span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`pb-2 transition-colors relative ${activeTab === 'history' ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
-                }`}
-            >
-              History
-              {activeTab === 'history' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0284c7] rounded-full"></span>
-              )}
-            </button>
+          {/* Card 2: Requester */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-3">
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+              Requester
+            </h3>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-teal-50 text-teal-700 border border-teal-200 flex items-center justify-center font-bold text-xs shrink-0">
+                {ticket.contact?.name?.[0]?.toUpperCase() || ticket.creator?.name?.[0]?.toUpperCase() || 'R'}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900 leading-tight truncate">
+                  {ticket.contact?.name || ticket.creator?.name || 'Staff User'}
+                </p>
+                <p className="text-[11px] text-slate-400 truncate">
+                  {ticket.contactEmail || ticket.contact?.email || ticket.creator?.email || 'user@hospital.org'}
+                </p>
+              </div>
+            </div>
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+              <span className="text-slate-400 font-medium">Department</span>
+              <span className="font-semibold text-slate-800">
+                {ticket.contact?.department?.name || ticket.creator?.department?.name || 'General'}
+              </span>
+            </div>
           </div>
 
-          {activeTab === 'conversation' ? (
-            <div className="space-y-4">
-              {/* Initial Ticket Description Message */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5">
-                <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs shrink-0">
-                    {ticket.contact?.name?.[0] || ticket.creator?.name?.[0] || 'R'}
-                  </div>
-                  <div className="space-y-2 flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs font-bold text-slate-800">
-                        {ticket.contact?.name || ticket.creator?.name || 'Requester'}
-                      </p>
-                      <span className="text-[11px] text-slate-400 font-mono">
-                        {new Date(ticket.createdAt).toLocaleDateString('en-US', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
+          {/* Card 3: Activity Timeline */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-3">
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+              Activity Timeline
+            </h3>
+            <div className="space-y-3 text-xs relative before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+              {/* Event 1: Created */}
+              <div className="flex items-start gap-3 relative">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1 shrink-0 ring-4 ring-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-800 font-medium">Created by the ticket</p>
+                  <p className="text-[10px] text-slate-400">
+                    {formatRelativeTime(ticket.createdAt)}
+                  </p>
+                </div>
+              </div>
 
-                    <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
-                      {ticket.description}
+              {/* Event 2: Agent Assignment */}
+              {ticket.agent && (
+                <div className="flex items-start gap-3 relative">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1 shrink-0 ring-4 ring-white" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-800 font-medium">
+                      Assigned {ticket.agent.name}
                     </p>
-
-                    {/* Dynamic Attachments from Ticket (only if files were uploaded) */}
-                    {ticket.attachments && Array.isArray(ticket.attachments) && ticket.attachments.length > 0 && (
-                      <div className="pt-2 flex flex-wrap gap-2">
-                        {ticket.attachments.map((file, idx) => (
-                          <div
-                            key={idx}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 shadow-2xs"
-                          >
-                            <FileText className="w-3.5 h-3.5 text-rose-500 shrink-0" />
-                            <span className="font-semibold">{file.name}</span>
-                            {file.size && <span className="text-[10px] text-slate-400">{file.size}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <p className="text-[10px] text-slate-400">
+                      {formatRelativeTime(ticket.updatedAt || ticket.createdAt)}
+                    </p>
                   </div>
                 </div>
-              </div>
-
-              {/* Threaded Comments */}
-              {ticket.comments && ticket.comments.map((c) => (
-                <div key={c.id} className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs shrink-0">
-                      {c.user?.name?.[0] || 'S'}
-                    </div>
-                    <div className="space-y-2 flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-slate-800">{c.user?.name || 'Agent'}</p>
-                          {c.commentType === 'INTERNAL_NOTE' && (
-                            <span className="text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.2 rounded">
-                              Internal Note
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-mono">
-                          {new Date(c.createdAt).toLocaleDateString('en-US', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line">
-                        {c.body}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Reply & Internal Note Composer Box */}
-              <div
-                className={`rounded-2xl transition-all shadow-2xs p-4 space-y-3 ${
-                  composerMode === 'INTERNAL_NOTE'
-                    ? 'bg-amber-50/60 border-2 border-amber-300/90'
-                    : 'bg-white border border-slate-200/80'
-                }`}
-              >
-                {/* Mode Selector Tabs (Reply vs Add Note) */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100/80">
-                  <div className="flex items-center gap-1 p-0.5 bg-slate-100/80 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setComposerMode('REPLY')}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        composerMode === 'REPLY'
-                          ? 'bg-white text-sky-700 shadow-2xs'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Reply</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setComposerMode('INTERNAL_NOTE')}
-                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        composerMode === 'INTERNAL_NOTE'
-                          ? 'bg-amber-500 text-white shadow-2xs'
-                          : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      <span>🔒 Add Note</span>
-                    </button>
-                  </div>
-
-                  {composerMode === 'INTERNAL_NOTE' && (
-                    <span className="text-[11px] font-semibold text-amber-700 flex items-center gap-1">
-                      <span>Only visible to staff & agents</span>
-                    </span>
-                  )}
-                </div>
-
-                <form onSubmit={handleSendReply}>
-                  <textarea
-                    rows={3}
-                    placeholder={
-                      composerMode === 'INTERNAL_NOTE'
-                        ? 'Write an internal note about this ticket (will not be seen by requester)...'
-                        : 'Type a reply to the requester...'
-                    }
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    className="w-full text-xs text-slate-800 placeholder:text-slate-400 border-0 focus:outline-none resize-none p-1 bg-transparent"
-                  />
-
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-2 text-slate-400">
-                      <button type="button" className="p-1 hover:text-slate-600 rounded" title="Attach file">
-                        <Paperclip className="w-4 h-4" />
-                      </button>
-                      <button type="button" className="p-1 hover:text-slate-600 rounded" title="Add link">
-                        <Link2 className="w-4 h-4" />
-                      </button>
-                      <button type="button" className="p-1 hover:text-slate-600 rounded" title="Emoji">
-                        <Smile className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={submittingComment || !commentText.trim()}
-                      className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-40 cursor-pointer ${
-                        composerMode === 'INTERNAL_NOTE'
-                          ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/20'
-                          : 'bg-[#0284c7] hover:bg-sky-600 text-white shadow-sky-600/20'
-                      }`}
-                    >
-                      <span>{composerMode === 'INTERNAL_NOTE' ? 'Add Note' : 'Send'}</span>
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          ) : (
-            /* History Timeline Tab */
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-4">
-              <h4 className="text-xs font-bold text-slate-800">Status & Assignment History</h4>
-              {(!ticket.statusHistories || ticket.statusHistories.length === 0) && (
-                <p className="text-xs text-slate-400 italic">No previous status history logged.</p>
               )}
-              <div className="space-y-3">
-                {ticket.statusHistories && ticket.statusHistories.map((h) => (
-                  <div key={h.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-slate-800">
-                        Status changed to <span className="text-sky-600">{h.newStatus}</span>
+
+              {/* Status History Events */}
+              {ticket.statusHistories && ticket.statusHistories.length > 0 ? (
+                ticket.statusHistories.slice(0, 3).map((h) => (
+                  <div key={h.id} className="flex items-start gap-3 relative">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0 ring-4 ring-white" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-slate-800 font-medium">
+                        Status changed the ticket
                       </p>
-                      <p className="text-[11px] text-slate-400">By {h.user?.name || 'Staff'}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {formatRelativeTime(h.changedAt)}
+                      </p>
                     </div>
-                    <span className="text-[10px] text-slate-400 font-mono">
-                      {new Date(h.changedAt).toLocaleDateString('en-US', {
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
                   </div>
-                ))}
+                ))
+              ) : (
+                <div className="flex items-start gap-3 relative">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0 ring-4 ring-white" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-800 font-medium">
+                      Status changed the ticket
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      {formatRelativeTime(ticket.updatedAt || ticket.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Priority updated */}
+              <div className="flex items-start gap-3 relative">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0 ring-4 ring-white" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-800 font-medium">
+                    Priority updated the ticket
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    {formatRelativeTime(ticket.updatedAt || ticket.createdAt)}
+                  </p>
+                </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -688,7 +773,9 @@ export default function TicketDetails() {
             <select
               value={updateStatus}
               onChange={(e) => setUpdateStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
+              onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
             >
               <option value="OPEN">🟢 Open</option>
               <option value="PENDING">🟡 Pending</option>
@@ -706,7 +793,9 @@ export default function TicketDetails() {
             <select
               value={updateTicketTypeId}
               onChange={(e) => setUpdateTicketTypeId(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
+              onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
             >
               <option value="">Select Type</option>
               {ticketTypes.map((tt) => (
@@ -725,7 +814,7 @@ export default function TicketDetails() {
             <select
               value={updateGroupId}
               onChange={(e) => handleGroupChange(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800 font-medium"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 font-medium"
             >
               <option value="">Select Group</option>
               {groups.map((g) => (
@@ -745,7 +834,7 @@ export default function TicketDetails() {
             <select
               value={updateAgentId}
               onChange={(e) => setUpdateAgentId(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800 font-medium"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 font-medium"
             >
               <option value="">Unassigned</option>
               {agents.map((ag) => (
@@ -764,7 +853,9 @@ export default function TicketDetails() {
             <select
               value={updatePriority}
               onChange={(e) => setUpdatePriority(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
+              onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
             >
               <option value="HIGH">🔴 High</option>
               <option value="MEDIUM">🟡 Medium</option>
@@ -783,7 +874,7 @@ export default function TicketDetails() {
               placeholder="e.g. Reassigned to HR specialist for approval..."
               value={updateComment}
               onChange={(e) => setUpdateComment(e.target.value)}
-              className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 text-slate-800"
+              className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800"
             />
           </div>
 
@@ -798,7 +889,8 @@ export default function TicketDetails() {
             <button
               type="submit"
               disabled={updatingTicket}
-              className="px-5 py-2 bg-[#0284c7] hover:bg-sky-600 text-white rounded-xl text-xs font-bold shadow-md shadow-sky-600/20 disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2 text-white rounded-xl text-xs font-bold shadow-md disabled:opacity-50 cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}
             >
               {updatingTicket ? 'Updating...' : 'Submit'}
             </button>

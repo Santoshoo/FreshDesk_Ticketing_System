@@ -32,135 +32,140 @@ export default function Sidebar({ isOpen, onClose }) {
   };
 
   const navClass = ({ isActive }) =>
-    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+    `relative flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 group ${
       isActive
-        ? 'bg-[#0284c7] text-white shadow-md shadow-sky-500/25'
-        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+        ? 'bg-indigo-600/20 text-white'
+        : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
     }`;
 
   const adminNavClass = ({ isActive }) =>
-    `flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+    `relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
       isActive
-        ? 'bg-sky-500/20 text-sky-400 font-semibold'
-        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+        ? 'bg-indigo-500/20 text-indigo-300 font-semibold'
+        : 'text-slate-500 hover:text-slate-200 hover:bg-white/5'
     }`;
+
+  const NavItem = ({ to, end, icon: Icon, label, onClick }) => (
+    <NavLink to={to} end={end} className={navClass} onClick={onClick}>
+      {({ isActive }) => (
+        <>
+          {isActive && (
+            <span
+              className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-r-full"
+              style={{ background: '#818cf8' }}
+            />
+          )}
+          <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-indigo-400' : 'text-slate-500 group-hover:text-slate-300'}`} />
+          <span>{label}</span>
+        </>
+      )}
+    </NavLink>
+  );
 
   return (
     <>
       {/* Mobile Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-xs"
+          className="fixed inset-0 bg-black/70 z-40 lg:hidden backdrop-blur-sm"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-[#0b1528] text-slate-300 flex flex-col transition-transform duration-200 ease-in-out border-r border-[#15243d] lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 flex flex-col transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
+        style={{
+          background: 'linear-gradient(175deg, #0f172a 0%, #1a1560 55%, #0f172a 100%)',
+          borderRight: '1px solid rgba(99,102,241,0.15)',
+        }}
       >
         {/* Brand Header */}
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-[#15243d]">
-          <div className="w-8 h-8 rounded-full bg-[#0284c7] text-white flex items-center justify-center font-extrabold shadow-md shadow-sky-500/30 shrink-0">
-            <span className="text-base leading-none">+</span>
+        <div
+          className="h-16 flex items-center gap-3 px-5 shrink-0"
+          style={{ borderBottom: '1px solid rgba(99,102,241,0.15)' }}
+        >
+          <div
+            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-extrabold text-white text-base leading-none"
+            style={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+              boxShadow: '0 0 16px rgba(99,102,241,0.5), 0 2px 8px rgba(0,0,0,0.3)',
+            }}
+          >
+            +
           </div>
           <div className="min-w-0">
-            <h1 className="font-bold text-white text-sm tracking-tight truncate">
-              KIMS Helpdesk
+            <h1 className="font-extrabold text-white text-sm tracking-tight truncate leading-tight flex items-center gap-1.5">
+              <span>KIMS</span>
+              <span style={{ color: '#818cf8' }}>ICT</span>
             </h1>
-            <p className="text-[10px] text-slate-400 font-medium tracking-wider uppercase">
-              ICT Service Desk
+            <p className="text-[9px] font-semibold tracking-widest uppercase" style={{ color: '#94a3b8' }}>
+              Service Desk
             </p>
           </div>
         </div>
 
         {/* Navigation Items */}
-        <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-800">
-          <NavLink to="/dashboard" className={navClass} onClick={onClose}>
-            <LayoutDashboard className="w-4 h-4 shrink-0" />
-            <span>Dashboard</span>
-          </NavLink>
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+          <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={onClose} />
+          <NavItem to="/tickets/my" icon={Inbox} label="My Tickets" onClick={onClose} />
+          <NavItem to="/tickets" end icon={Ticket} label="All Tickets" onClick={onClose} />
+          <NavItem to="/tickets/create" icon={PlusCircle} label="Create Ticket" onClick={onClose} />
+          <NavItem to="/reports" icon={BarChart3} label="Reports" onClick={onClose} />
+          <NavItem to="/settings" icon={Settings} label="Settings" onClick={onClose} />
 
-          <NavLink to="/tickets/my" className={navClass} onClick={onClose}>
-            <Inbox className="w-4 h-4 shrink-0" />
-            <span>My Tickets</span>
-          </NavLink>
-
-          <NavLink to="/tickets" end className={navClass} onClick={onClose}>
-            <Ticket className="w-4 h-4 shrink-0" />
-            <span>All Tickets</span>
-          </NavLink>
-
-          <NavLink to="/tickets/create" className={navClass} onClick={onClose}>
-            <PlusCircle className="w-4 h-4 shrink-0" />
-            <span>Create Ticket</span>
-          </NavLink>
-
-          <NavLink to="/reports" className={navClass} onClick={onClose}>
-            <BarChart3 className="w-4 h-4 shrink-0" />
-            <span>Reports</span>
-          </NavLink>
-
-          <NavLink to="/settings" className={navClass} onClick={onClose}>
-            <Settings className="w-4 h-4 shrink-0" />
-            <span>Settings</span>
-          </NavLink>
-
-          {/* Ticket Logs for Agents & Admins */}
           {(user?.role === 'AGENT' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
-            <NavLink to="/tickets/logs" className={navClass} onClick={onClose}>
-              <History className="w-4 h-4 shrink-0" />
-              <span>Ticket Logs</span>
-            </NavLink>
+            <NavItem to="/tickets/logs" icon={History} label="Ticket Logs" onClick={onClose} />
           )}
 
-          {/* Master Data Collapsible Section for Admins */}
+          {/* Master Data Section */}
           {isAdmin && (
-            <div className="pt-4 border-t border-[#15243d] mt-4">
+            <div className="pt-4 mt-3" style={{ borderTop: '1px solid rgba(99,102,241,0.12)' }}>
               <button
                 type="button"
                 onClick={() => setAdminMenuOpen(!adminMenuOpen)}
-                className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-slate-200 transition-colors"
+                className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors hover:text-slate-200"
+                style={{ color: '#6366f1' }}
               >
                 <div className="flex items-center gap-2">
-                  <Shield className="w-3.5 h-3.5 text-sky-400" />
+                  <Shield className="w-3.5 h-3.5" />
                   <span>Master Data</span>
+                  <span
+                    className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider"
+                    style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}
+                  >
+                    ADMIN
+                  </span>
                 </div>
-                {adminMenuOpen ? (
-                  <ChevronDown className="w-3.5 h-3.5" />
-                ) : (
-                  <ChevronRight className="w-3.5 h-3.5" />
-                )}
+                {adminMenuOpen
+                  ? <ChevronDown className="w-3.5 h-3.5 text-slate-600" />
+                  : <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
+                }
               </button>
 
               {adminMenuOpen && (
-                <div className="space-y-1 pl-1 mt-1">
+                <div className="space-y-0.5 pl-1 mt-1">
                   <NavLink to="/admin/employee-emails" className={adminNavClass} onClick={onClose}>
                     <Mail className="w-3.5 h-3.5 shrink-0" />
                     <span>Employee Emails</span>
                   </NavLink>
-
                   <NavLink to="/admin/users" className={adminNavClass} onClick={onClose}>
                     <Users className="w-3.5 h-3.5 shrink-0" />
                     <span>User Master</span>
                   </NavLink>
-
                   <NavLink to="/admin/departments" className={adminNavClass} onClick={onClose}>
                     <Building2 className="w-3.5 h-3.5 shrink-0" />
                     <span>Departments</span>
                   </NavLink>
-
                   <NavLink to="/admin/groups" className={adminNavClass} onClick={onClose}>
                     <FolderKanban className="w-3.5 h-3.5 shrink-0" />
                     <span>Support Groups</span>
                   </NavLink>
-
                   <NavLink to="/admin/agents" className={adminNavClass} onClick={onClose}>
                     <UserCheck className="w-3.5 h-3.5 shrink-0" />
                     <span>Agent Groups</span>
                   </NavLink>
-
                   <NavLink to="/admin/ticket-types" className={adminNavClass} onClick={onClose}>
                     <Tag className="w-3.5 h-3.5 shrink-0" />
                     <span>Ticket Types</span>
@@ -171,26 +176,41 @@ export default function Sidebar({ isOpen, onClose }) {
           )}
         </div>
 
-        {/* User Footer & Logout */}
-        <div className="p-3 border-t border-[#15243d] bg-[#08101f]">
-          <div className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-900/60 border border-slate-800/80">
+        {/* User Footer */}
+        <div className="p-3 shrink-0" style={{ borderTop: '1px solid rgba(99,102,241,0.12)' }}>
+          <div
+            className="flex items-center justify-between gap-2 p-2.5 rounded-xl"
+            style={{
+              background: 'rgba(99,102,241,0.1)',
+              border: '1px solid rgba(99,102,241,0.2)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-sky-600/30 text-sky-400 border border-sky-500/30 flex items-center justify-center font-bold text-xs shrink-0">
+              <div
+                className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 text-white"
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  boxShadow: '0 0 10px rgba(99,102,241,0.4)',
+                }}
+              >
                 {user?.name?.[0]?.toUpperCase() || 'U'}
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-white truncate leading-tight">
                   {user?.name || 'Staff User'}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate">
+                <p className="text-[10px] truncate font-medium" style={{ color: '#818cf8' }}>
                   {user?.role || 'EMPLOYEE'}
                 </p>
               </div>
             </div>
-
             <button
               onClick={handleLogout}
-              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors shrink-0"
+              className="p-1.5 rounded-lg transition-all shrink-0 text-slate-500 hover:text-rose-400"
+              style={{ background: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(244,63,94,0.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               title="Logout"
             >
               <LogOut className="w-4 h-4" />

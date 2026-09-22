@@ -35,7 +35,7 @@ export class DashboardRepository {
     return summary;
   }
 
-  async getRecentTickets(where = {}, limit = 5) {
+  async getRecentTickets(where = {}, limit = 8) {
     return prisma.ticket.findMany({
       where,
       take: limit,
@@ -45,6 +45,7 @@ export class DashboardRepository {
         ticketNumber: true,
         subject: true,
         status: true,
+        priority: true,
         createdAt: true,
         updatedAt: true,
         contact: {

@@ -83,7 +83,7 @@ export default function Settings() {
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <User className={`w-4 h-4 ${activeSection === 'profile' ? 'text-sky-600' : 'text-slate-400'}`} />
+                <User className={`w-4 h-4 ${activeSection === 'profile' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 <span className="text-xs font-bold text-slate-800">My Profile</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5 ml-6">
@@ -100,7 +100,7 @@ export default function Settings() {
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <KeyRound className={`w-4 h-4 ${activeSection === 'password' ? 'text-sky-600' : 'text-slate-400'}`} />
+                <KeyRound className={`w-4 h-4 ${activeSection === 'password' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 <span className="text-xs font-bold text-slate-800">Change Password</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5 ml-6">
@@ -117,7 +117,7 @@ export default function Settings() {
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Bell className={`w-4 h-4 ${activeSection === 'notifications' ? 'text-sky-600' : 'text-slate-400'}`} />
+                <Bell className={`w-4 h-4 ${activeSection === 'notifications' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 <span className="text-xs font-bold text-slate-800">Notification Preferences</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5 ml-6">
@@ -141,7 +141,7 @@ export default function Settings() {
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Sun className={`w-4 h-4 ${activeSection === 'theme' ? 'text-sky-600' : 'text-slate-400'}`} />
+                <Sun className={`w-4 h-4 ${activeSection === 'theme' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 <span className="text-xs font-bold text-slate-800">Theme</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5 ml-6">
@@ -158,7 +158,7 @@ export default function Settings() {
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <Globe className={`w-4 h-4 ${activeSection === 'language' ? 'text-sky-600' : 'text-slate-400'}`} />
+                <Globe className={`w-4 h-4 ${activeSection === 'language' ? 'text-indigo-600' : 'text-slate-400'}`} />
                 <span className="text-xs font-bold text-slate-800">Language</span>
               </div>
               <p className="text-[11px] text-slate-400 mt-0.5 ml-6">
@@ -184,7 +184,7 @@ export default function Settings() {
                 <div>
                   <h4 className="text-sm font-bold text-slate-800">{user?.name}</h4>
                   <p className="text-xs text-slate-500">{user?.email}</p>
-                  <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-sky-50 text-sky-700 border border-sky-200">
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
                     {user?.role || 'EMPLOYEE'}
                   </span>
                 </div>
@@ -251,7 +251,7 @@ export default function Settings() {
                   placeholder="••••••••"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
 
@@ -265,7 +265,7 @@ export default function Settings() {
                   placeholder="At least 6 characters"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
 
@@ -279,7 +279,7 @@ export default function Settings() {
                   placeholder="Re-enter new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+                  className="w-full px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
 
@@ -287,7 +287,7 @@ export default function Settings() {
                 <button
                   type="submit"
                   disabled={passwordLoading}
-                  className="px-5 py-2 bg-[#0284c7] hover:bg-sky-600 text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-50"
+                  className="px-5 py-2 bg-[#6366f1] hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-50"
                 >
                   {passwordLoading ? 'Updating...' : 'Update Password'}
                 </button>
@@ -312,7 +312,7 @@ export default function Settings() {
                     type="checkbox"
                     checked={notifyOnCreate}
                     onChange={(e) => setNotifyOnCreate(e.target.checked)}
-                    className="w-4 h-4 text-sky-600 rounded"
+                    className="w-4 h-4 text-indigo-600 rounded"
                   />
                 </label>
 
@@ -325,7 +325,7 @@ export default function Settings() {
                     type="checkbox"
                     checked={notifyOnStatusChange}
                     onChange={(e) => setNotifyOnStatusChange(e.target.checked)}
-                    className="w-4 h-4 text-sky-600 rounded"
+                    className="w-4 h-4 text-indigo-600 rounded"
                   />
                 </label>
 
@@ -338,7 +338,7 @@ export default function Settings() {
                     type="checkbox"
                     checked={notifyOnComment}
                     onChange={(e) => setNotifyOnComment(e.target.checked)}
-                    className="w-4 h-4 text-sky-600 rounded"
+                    className="w-4 h-4 text-indigo-600 rounded"
                   />
                 </label>
               </div>
@@ -362,7 +362,7 @@ export default function Settings() {
                     }}
                     className={`p-4 rounded-xl border text-center text-xs font-bold capitalize transition-all ${
                       selectedTheme === t
-                        ? 'border-sky-500 bg-sky-50/50 text-sky-700 shadow-2xs'
+                        ? 'border-indigo-500 bg-sky-50/50 text-sky-700 shadow-2xs'
                         : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                     }`}
                   >
@@ -394,12 +394,12 @@ export default function Settings() {
                     }}
                     className={`flex items-center justify-between p-3.5 rounded-xl border cursor-pointer ${
                       selectedLanguage === lang.id
-                        ? 'border-sky-500 bg-sky-50/50 text-sky-800 font-bold'
+                        ? 'border-indigo-500 bg-sky-50/50 text-sky-800 font-bold'
                         : 'border-slate-200 hover:bg-slate-50 text-slate-700'
                     }`}
                   >
                     <span>{lang.label}</span>
-                    {selectedLanguage === lang.id && <Check className="w-4 h-4 text-sky-600" />}
+                    {selectedLanguage === lang.id && <Check className="w-4 h-4 text-indigo-600" />}
                   </label>
                 ))}
               </div>

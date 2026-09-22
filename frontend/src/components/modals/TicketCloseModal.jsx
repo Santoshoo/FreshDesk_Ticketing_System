@@ -93,7 +93,7 @@ export default function TicketCloseModal({
                 ? 'Explain what was done to resolve the issue (e.g. Printer driver reinstalled and verified)...'
                 : 'Enter closure remarks or feedback...'
             }
-            className="w-full p-3 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 placeholder:text-slate-400 resize-none text-slate-800"
+            className="w-full p-3 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 placeholder:text-slate-400 resize-none text-slate-800"
           />
         </div>
 

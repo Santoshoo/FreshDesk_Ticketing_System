@@ -53,28 +53,29 @@ export default function Login() {
   return (
     <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#f8fafc] font-['Inter',sans-serif]">
       {/* ================= LEFT PANEL: Deep Navy Healthcare IT Showcase ================= */}
-      <div className="lg:w-1/2 bg-gradient-to-br from-[#07132b] via-[#0b1d3a] to-[#0f284e] text-white p-8 sm:p-12 lg:p-14 flex flex-col justify-between relative overflow-hidden shadow-2xl">
+      <div className="lg:w-1/2 text-white p-8 sm:p-12 lg:p-14 flex flex-col justify-between relative overflow-hidden shadow-2xl"
+        style={{ background: 'linear-gradient(145deg, #0f172a 0%, #1e1b4b 40%, #1a1060 70%, #0f172a 100%)' }}>
         {/* Soft Radial Ambient Glows */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-3xl pointer-events-none -mr-32 -mt-32" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-3xl pointer-events-none -mr-32 -mt-32" />
         <div className="absolute bottom-0 left-0 w-[450px] h-[450px] bg-blue-600/15 rounded-full blur-3xl pointer-events-none -ml-24 -mb-24" />
 
         {/* Top Header & Brand */}
         <div className="relative z-10">
           <div className="flex items-center gap-2.5 mb-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 flex items-center justify-center font-black text-white shadow-md shadow-sky-500/25">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center font-black text-white shadow-md" style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', boxShadow: '0 0 16px rgba(99,102,241,0.5)' }}>
               K
             </div>
             <div>
               <span className="font-black text-2xl tracking-tight text-white">KIMS</span>
-              <span className="font-light text-2xl text-sky-400 ml-1.5">Helpdesk</span>
+              <span className="font-light text-2xl ml-1.5" style={{ color: '#a5b4fc' }}>Helpdesk</span>
             </div>
           </div>
           <p className="text-xs text-slate-400 tracking-wide font-medium">ICT Service Desk System</p>
 
           {/* Hero Headline */}
           <div className="mt-10 lg:mt-14 max-w-lg">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-500/15 border border-sky-400/20 text-sky-300 text-[11px] font-semibold mb-4">
-              <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-semibold mb-4" style={{ background: 'rgba(99,102,241,0.15)', borderColor: 'rgba(99,102,241,0.3)', color: '#a5b4fc' }}>
+              <Sparkles className="w-3.5 h-3.5" style={{ color: '#818cf8' }} />
               <span>Enterprise Support Platform</span>
             </div>
             <h2 className="text-3xl lg:text-4xl font-extrabold tracking-tight leading-tight text-white">
@@ -100,8 +101,8 @@ export default function Login() {
 
             {/* 2. 24/7 Service Desk */}
             <div className="bg-white/5 hover:bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-sm transition-all">
-              <div className="w-9 h-9 rounded-xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center mb-3">
-                <Headphones className="w-5 h-5 text-sky-400" />
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-sky-400/30 flex items-center justify-center mb-3">
+                <Headphones className="w-5 h-5 text-indigo-400" />
               </div>
               <h4 className="text-xs font-bold text-white">24/7 Desk</h4>
               <p className="text-[11px] text-slate-300/80 mt-1 leading-snug">Continuous support across all hospital blocks</p>
@@ -184,7 +185,9 @@ export default function Login() {
                     placeholder="e.g. admin@kims.hospital or 211210"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0055d4] transition-all placeholder:text-slate-400 text-slate-800"
+                    className="w-full pl-10 pr-4 py-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 transition-all placeholder:text-slate-400 text-slate-800" style={{ '--tw-ring-color': 'rgba(99,102,241,0.2)' }}
+                    onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#d1d5db'; e.currentTarget.style.boxShadow = 'none'; }}
                   />
                 </div>
               </div>
@@ -202,7 +205,9 @@ export default function Login() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-[#0055d4] transition-all placeholder:text-slate-400 text-slate-800"
+                    className="w-full pl-10 pr-10 py-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none transition-all placeholder:text-slate-400 text-slate-800"
+                    onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12)'; }}
+                    onBlur={e => { e.currentTarget.style.borderColor = '#d1d5db'; e.currentTarget.style.boxShadow = 'none'; }}
                   />
                   <button
                     type="button"
@@ -218,7 +223,7 @@ export default function Login() {
               <div className="flex justify-end">
                 <Link
                   to="/forgot-password"
-                  className="text-xs font-semibold text-[#0055d4] hover:underline"
+                  className="text-xs font-semibold hover:underline" style={{ color: '#6366f1' }}
                 >
                   Forgot Password?
                 </Link>
@@ -252,7 +257,8 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-[#0055d4] to-[#0284c7] hover:from-[#0047b8] hover:to-[#0369a1] active:scale-[0.99] text-white font-bold py-2.5 px-4 rounded-xl shadow-md shadow-blue-600/25 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer mt-2"
+                className="w-full active:scale-[0.99] text-white font-bold py-2.5 px-4 rounded-xl transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer mt-2"
+                style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', boxShadow: '0 4px 16px rgba(99,102,241,0.35)' }}
               >
                 {loading ? (
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

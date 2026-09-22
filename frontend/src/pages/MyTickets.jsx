@@ -71,12 +71,12 @@ export default function MyTickets() {
             setPage(1);
           }}
           className={`pb-2.5 transition-colors relative ${
-            activeTab === 'created' ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
+            activeTab === 'created' ? 'text-[#6366f1] font-bold' : 'hover:text-slate-800'
           }`}
         >
           Created by Me ({counts.created || pagination.total})
           {activeTab === 'created' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0284c7] rounded-full"></span>
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#6366f1] rounded-full"></span>
           )}
         </button>
 
@@ -86,12 +86,12 @@ export default function MyTickets() {
             setPage(1);
           }}
           className={`pb-2.5 transition-colors relative ${
-            activeTab === 'assigned' ? 'text-[#0284c7] font-bold' : 'hover:text-slate-800'
+            activeTab === 'assigned' ? 'text-[#6366f1] font-bold' : 'hover:text-slate-800'
           }`}
         >
           Assigned to Me ({counts.assigned || 0})
           {activeTab === 'assigned' && (
-            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0284c7] rounded-full"></span>
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#6366f1] rounded-full"></span>
           )}
         </button>
       </div>
@@ -108,7 +108,7 @@ export default function MyTickets() {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
 
@@ -118,7 +118,7 @@ export default function MyTickets() {
             setStatus(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 text-slate-700 font-medium"
+          className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 font-medium"
         >
           <option value="">Status: All</option>
           <option value="OPEN">Open</option>
@@ -134,7 +134,7 @@ export default function MyTickets() {
             setPriority(e.target.value);
             setPage(1);
           }}
-          className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500/20 text-slate-700 font-medium"
+          className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 font-medium"
         >
           <option value="">Priority: All</option>
           <option value="HIGH">High</option>
@@ -147,7 +147,7 @@ export default function MyTickets() {
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
         {loading ? (
           <div className="py-16 text-center">
-            <div className="w-8 h-8 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
             <p className="text-xs text-slate-400">Loading your tickets...</p>
           </div>
         ) : tickets.length === 0 ? (
@@ -158,7 +158,7 @@ export default function MyTickets() {
             action={
               <button
                 onClick={() => navigate('/tickets/create')}
-                className="inline-flex items-center gap-2 bg-[#0284c7] hover:bg-sky-600 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors"
+                className="inline-flex items-center gap-2 bg-[#6366f1] hover:bg-indigo-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition-colors"
               >
                 Create New Ticket
               </button>
@@ -181,23 +181,37 @@ export default function MyTickets() {
                   const p = t.priority || 'MEDIUM';
                   const isHigh = p === 'HIGH' || p === 'URGENT';
                   const isLow = p === 'LOW';
+                  const stripeBg = isHigh
+                    ? 'bg-rose-500'
+                    : isLow
+                    ? 'bg-emerald-500'
+                    : 'bg-amber-500';
 
                   return (
                     <tr
                       key={t.id}
                       onClick={() => navigate(`/tickets/${t.id}`)}
-                      className="hover:bg-slate-50/80 cursor-pointer transition-colors"
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors group"
                     >
-                      <td className="px-5 py-3.5 font-bold text-sky-600">#{t.ticketNumber}</td>
-                      <td className="px-5 py-3.5 font-medium text-slate-800">{t.subject}</td>
+                      <td className="px-5 py-3.5 font-bold font-mono text-slate-900 text-xs">
+                        #{t.ticketNumber}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`w-1 h-5 rounded-full shrink-0 ${stripeBg}`} />
+                          <span className="font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+                            {t.subject}
+                          </span>
+                        </div>
+                      </td>
                       <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${
                             isHigh
-                              ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                              ? 'bg-[#fee2e2] text-[#ef4444]'
                               : isLow
-                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                              : 'bg-amber-50 text-amber-600 border border-amber-200'
+                              ? 'bg-[#dcfce7] text-[#15803d]'
+                              : 'bg-[#fef3c7] text-[#d97706]'
                           }`}
                         >
                           {isHigh ? 'High' : isLow ? 'Low' : 'Medium'}
@@ -205,14 +219,16 @@ export default function MyTickets() {
                       </td>
                       <td className="px-5 py-3.5">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${
                             t.status === 'OPEN'
-                              ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-                              : t.status === 'PENDING' || t.status === 'IN_PROGRESS'
-                              ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                              ? 'bg-[#dbeafe] text-[#1d4ed8]'
+                              : t.status === 'IN_PROGRESS'
+                              ? 'bg-[#fef3c7] text-[#b45309]'
                               : t.status === 'RESOLVED'
-                              ? 'bg-sky-50 text-sky-600 border border-sky-200'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200'
+                              ? 'bg-[#dcfce7] text-[#15803d]'
+                              : t.status === 'CLOSED'
+                              ? 'bg-[#f1f5f9] text-[#64748b]'
+                              : 'bg-[#f1f5f9] text-[#475569]'
                           }`}
                         >
                           {t.status === 'IN_PROGRESS'
@@ -259,7 +275,7 @@ export default function MyTickets() {
                   onClick={() => setPage(pNum)}
                   className={`w-7 h-7 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors ${
                     page === pNum
-                      ? 'bg-[#0284c7] text-white'
+                      ? 'bg-[#6366f1] text-white'
                       : 'border border-slate-200 hover:bg-slate-50 text-slate-700'
                   }`}
                 >
