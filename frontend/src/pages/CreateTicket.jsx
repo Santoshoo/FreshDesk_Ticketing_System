@@ -19,6 +19,10 @@ import {
   RotateCw,
   ChevronDown,
 } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import UnderlineExt from '@tiptap/extension-underline';
+import LinkExt from '@tiptap/extension-link';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import contactApi from '../services/contactApi.js';
@@ -47,12 +51,53 @@ export default function CreateTicket() {
   const [groupId, setGroupId] = useState('');
   const [priority, setPriority] = useState('');
   const [agentId, setAgentId] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState('OPEN'); // Default to OPEN as requested
   const [description, setDescription] = useState('');
+  const [formatDropdownOpen, setFormatDropdownOpen] = useState(false);
   const [createAnother, setCreateAnother] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [createdTicket, setCreatedTicket] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Tiptap Rich Text Editor Setup
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      UnderlineExt,
+      LinkExt.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-indigo-600 underline hover:text-indigo-800',
+        },
+      }),
+    ],
+    content: '',
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      setDescription(editor.isEmpty ? '' : html);
+    },
+  });
+
+  // Toolbar action helpers
+  const handleToggleLink = () => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('Enter link URL:', previousUrl || 'https://');
+    if (url === null) return;
+    if (url.trim() === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
+  };
+
+  const getCurrentHeading = () => {
+    if (!editor) return 'Paragraph';
+    if (editor.isActive('heading', { level: 1 })) return 'Heading 1';
+    if (editor.isActive('heading', { level: 2 })) return 'Heading 2';
+    if (editor.isActive('heading', { level: 3 })) return 'Heading 3';
+    return 'Paragraph';
+  };
 
   // Master Data Dropdowns
   const [ticketTypes, setTicketTypes] = useState([]);
@@ -180,12 +225,16 @@ export default function CreateTicket() {
       showToast('Please select a priority.', 'error');
       return;
     }
-    if (!status) {
-      setError('Please select a Status.');
-      showToast('Please select a status.', 'error');
-      return;
-    }
-    if (!description.trim()) {
+
+    const finalStatus = status || 'OPEN';
+
+    const finalDescription = editor ? editor.getHTML() : description;
+    const isDescriptionEmpty =
+      !finalDescription ||
+      finalDescription === '<p></p>' ||
+      (editor && editor.isEmpty);
+
+    if (isDescriptionEmpty) {
       setError('Please provide a description of the issue.');
       showToast('Please enter a description.', 'error');
       return;
@@ -206,8 +255,8 @@ export default function CreateTicket() {
         groupId: parseInt(groupId, 10),
         agentId: agentId ? parseInt(agentId, 10) : null,
         priority: priority,
-        status: status,
-        description: description.trim(),
+        status: finalStatus,
+        description: finalDescription.trim(),
         attachments: attachments.map((a) => ({
           name: a.name,
           size: a.size,
@@ -224,12 +273,13 @@ export default function CreateTicket() {
           setContactSearch('');
           setSubject('');
           setDescription('');
+          if (editor) editor.commands.setContent('');
           setAttachments([]);
           setTicketTypeId('');
           setGroupId('');
           setPriority('');
           setAgentId('');
-          setStatus('');
+          setStatus('OPEN');
         } else {
           setCreatedTicket(res.data);
           setShowSuccessModal(true);
@@ -461,14 +511,9 @@ export default function CreateTicket() {
                 required
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
-                  !status ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
-                }`}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors text-slate-800 font-medium"
               >
-                <option value="" disabled>
-                  Select Status
-                </option>
-                <option value="OPEN" className="text-slate-800 font-normal">🟢 Open</option>
+                <option value="OPEN" className="text-slate-800 font-normal">🟢 Open (Default)</option>
                 <option value="PENDING" className="text-slate-800 font-normal">🟡 Pending</option>
                 <option value="IN_PROGRESS" className="text-slate-800 font-normal">🔵 In Progress</option>
                 <option value="RESOLVED" className="text-slate-800 font-normal">✅ Resolved</option>
@@ -477,58 +522,239 @@ export default function CreateTicket() {
             </div>
           </div>
 
-          {/* 4. Description with Rich Formatting Toolbar */}
+          {/* 4. Description with Active Rich Formatting Toolbar */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Description <span className="text-rose-500">*</span>
             </label>
 
-            <div className="border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-indigo-500 transition-all">
+            <div className="border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all bg-white">
               {/* Toolbar */}
-              <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-center gap-2 text-slate-500 flex-wrap">
-                <span className="text-[11px] font-medium text-slate-700 flex items-center gap-1 cursor-pointer">
-                  Paragraph <ChevronDown className="w-3 h-3" />
-                </span>
-                <span className="w-px h-3.5 bg-slate-200 mx-1"></span>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Bold">
+              <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-center gap-1 text-slate-600 flex-wrap relative">
+                {/* Paragraph / Heading Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setFormatDropdownOpen(!formatDropdownOpen)}
+                    className="px-2 py-1 hover:bg-slate-200/80 rounded text-[11px] font-semibold text-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span>{getCurrentHeading()}</span>
+                    <ChevronDown className="w-3 h-3 text-slate-400" />
+                  </button>
+
+                  {formatDropdownOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setFormatDropdownOpen(false)}
+                      />
+                      <div className="absolute left-0 top-full mt-1 w-32 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 text-xs">
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            editor?.chain().focus().setParagraph().run();
+                            setFormatDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 hover:bg-slate-50 cursor-pointer ${
+                            editor?.isActive('paragraph') ? 'text-indigo-600 font-bold bg-indigo-50/50' : 'text-slate-700'
+                          }`}
+                        >
+                          Paragraph
+                        </button>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            editor?.chain().focus().toggleHeading({ level: 1 }).run();
+                            setFormatDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 hover:bg-slate-50 text-sm font-bold cursor-pointer ${
+                            editor?.isActive('heading', { level: 1 }) ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-700'
+                          }`}
+                        >
+                          Heading 1
+                        </button>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            editor?.chain().focus().toggleHeading({ level: 2 }).run();
+                            setFormatDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 hover:bg-slate-50 text-xs font-bold cursor-pointer ${
+                            editor?.isActive('heading', { level: 2 }) ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-700'
+                          }`}
+                        >
+                          Heading 2
+                        </button>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            editor?.chain().focus().toggleHeading({ level: 3 }).run();
+                            setFormatDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-1.5 hover:bg-slate-50 text-xs font-semibold cursor-pointer ${
+                            editor?.isActive('heading', { level: 3 }) ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-700'
+                          }`}
+                        >
+                          Heading 3
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <span className="w-px h-3.5 bg-slate-300 mx-1"></span>
+
+                {/* Bold */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor?.chain().focus().toggleBold().run()}
+                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                    editor?.isActive('bold')
+                      ? 'bg-indigo-100 text-indigo-700 font-bold'
+                      : 'hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title="Bold (Ctrl+B)"
+                >
                   <Bold className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Italic">
+
+                {/* Italic */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor?.chain().focus().toggleItalic().run()}
+                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                    editor?.isActive('italic')
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title="Italic (Ctrl+I)"
+                >
                   <Italic className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Underline">
+
+                {/* Underline */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor?.chain().focus().toggleUnderline().run()}
+                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                    editor?.isActive('underline')
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title="Underline (Ctrl+U)"
+                >
                   <Underline className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Strikethrough">
+
+                {/* Strikethrough */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor?.chain().focus().toggleStrike().run()}
+                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                    editor?.isActive('strike')
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title="Strikethrough"
+                >
                   <Strikethrough className="w-3.5 h-3.5" />
                 </button>
-                <span className="w-px h-3.5 bg-slate-200 mx-1"></span>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Code">
+
+                <span className="w-px h-3.5 bg-slate-300 mx-1"></span>
+
+                {/* Code */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor?.chain().focus().toggleCode().run()}
+                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                    editor?.isActive('code')
+                      ? 'bg-indigo-100 text-indigo-700 font-mono'
+                      : 'hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title="Code"
+                >
                   <Code className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Link">
+
+                {/* Link */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleToggleLink}
+                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                    editor?.isActive('link')
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title="Link"
+                >
                   <Link2 className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Bullet List">
+
+                {/* Bullet List */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                  className={`p-1.5 rounded transition-colors cursor-pointer ${
+                    editor?.isActive('bulletList')
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'hover:bg-slate-200 text-slate-600'
+                  }`}
+                  title="Bullet List"
+                >
                   <List className="w-3.5 h-3.5" />
                 </button>
-                <span className="w-px h-3.5 bg-slate-200 mx-1"></span>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Undo">
+
+                <span className="w-px h-3.5 bg-slate-300 mx-1"></span>
+
+                {/* Undo */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor?.chain().focus().undo().run()}
+                  disabled={!editor?.can().undo()}
+                  className="p-1.5 rounded hover:bg-slate-200 text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Undo (Ctrl+Z)"
+                >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
-                <button type="button" className="p-1 hover:bg-slate-200 rounded text-slate-600" title="Redo">
+
+                {/* Redo */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => editor?.chain().focus().redo().run()}
+                  disabled={!editor?.can().redo()}
+                  className="p-1.5 rounded hover:bg-slate-200 text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                  title="Redo (Ctrl+Y)"
+                >
                   <RotateCw className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              <textarea
-                required
-                rows={5}
-                placeholder="Provide a detailed description of the issue or request..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full p-3.5 text-xs text-slate-800 bg-white border-0 focus:outline-none placeholder:text-slate-400 resize-y"
-              />
+              {/* Tiptap Active Editor Content Area */}
+              <div
+                onClick={() => editor?.commands.focus()}
+                className="relative min-h-[140px] p-3.5 text-xs text-slate-800 bg-white cursor-text"
+              >
+                {editor && editor.isEmpty && (
+                  <span className="absolute top-3.5 left-3.5 text-xs text-slate-400 pointer-events-none select-none">
+                    Provide a detailed description of the issue or request...
+                  </span>
+                )}
+                <EditorContent editor={editor} />
+              </div>
             </div>
           </div>
 

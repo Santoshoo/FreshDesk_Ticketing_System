@@ -1,4 +1,6 @@
 import authService from '../services/authService.js';
+import { invalidateUserCache } from '../middleware/authMiddleware.js';
+
 export class AuthController {
   async login(req, res, next) {
     try {
@@ -19,6 +21,36 @@ export class AuthController {
       const result = await authService.getCurrentUser(req.user.id);
       res.json({
         success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateProfile(req, res, next) {
+    try {
+      const { name, mobile } = req.body;
+      const result = await authService.updateProfile(req.user.id, { name, mobile });
+      invalidateUserCache(req.user.id);
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async changePassword(req, res, next) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const result = await authService.changePassword(req.user.id, currentPassword, newPassword);
+      invalidateUserCache(req.user.id);
+      res.json({
+        success: true,
+        message: 'Password updated successfully',
         data: result,
       });
     } catch (error) {

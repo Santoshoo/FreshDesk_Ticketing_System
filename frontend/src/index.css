@@ -193,6 +193,15 @@ body {
 
 .tiptap { outline: none; min-height: 140px; color: #1e293b; font-size: 0.8125rem; line-height: 1.6; }
 .tiptap p  { margin: 0.4em 0; }
+.tiptap h1 { font-size: 1.25rem; font-weight: 700; margin: 0.6em 0 0.3em; color: #0f172a; }
+.tiptap h2 { font-size: 1.1rem; font-weight: 700; margin: 0.5em 0 0.25em; color: #1e293b; }
+.tiptap h3 { font-size: 0.95rem; font-weight: 600; margin: 0.4em 0 0.2em; color: #334155; }
+.tiptap strong { font-weight: 700; color: #0f172a; }
+.tiptap em { font-style: italic; }
+.tiptap u { text-decoration: underline; }
+.tiptap s { text-decoration: line-through; }
+.tiptap a { color: #4f46e5; text-decoration: underline; cursor: pointer; }
+.tiptap a:hover { color: #3730a3; }
 .tiptap ul, .tiptap ol { padding-left: 1.5em; margin: 0.5em 0; }
 .tiptap ul { list-style-type: disc; }
 .tiptap ol { list-style-type: decimal; }
@@ -234,5 +243,66 @@ body {
 }
 .badge-pulse {
   animation: badgePulse 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   DARK THEME UTILITIES
+   ============================================================ */
+
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0b0f19;
+  color: #f1f5f9;
+}
+
+html.dark .bg-white {
+  background-color: #111827;
+  color: #f1f5f9;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #1e293b;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1e293b;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-300,
+html.dark .border-slate-100 {
+  border-color: #334155;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: #f8fafc;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #cbd5e1;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: #94a3b8;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+html.dark input:disabled {
+  background-color: #0f172a;
+  color: #64748b;
 }
 

@@ -427,9 +427,16 @@ export default function TicketDetails() {
               </div>
             </div>
 
-            <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line pt-1">
-              {ticket.description}
-            </p>
+            {ticket.description && /<[a-z][\s\S]*>/i.test(ticket.description) ? (
+              <div
+                className="text-xs text-slate-700 leading-relaxed pt-1 space-y-1.5 [&_p]:mb-1.5 [&_strong]:font-bold [&_em]:italic [&_u]:underline [&_s]:line-through [&_code]:bg-slate-100 [&_code]:text-indigo-600 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-indigo-600 [&_a]:underline [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-bold"
+                dangerouslySetInnerHTML={{ __html: ticket.description }}
+              />
+            ) : (
+              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line pt-1">
+                {ticket.description}
+              </p>
+            )}
 
             {/* Attachments */}
             {ticket.attachments && Array.isArray(ticket.attachments) && ticket.attachments.length > 0 && (

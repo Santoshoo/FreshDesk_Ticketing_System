@@ -112,6 +112,208 @@ export class DashboardRepository {
 
     return Object.values(dayMap);
   }
+
+  async getCategoryReport(where = {}) {
+    const [categoryStats, ticketTypes, totalTickets] = await Promise.all([
+      prisma.ticket.groupBy({
+        by: ['ticketTypeId', 'status'],
+        where,
+        _count: { id: true },
+      }),
+      prisma.ticketType.findMany({
+        select: { id: true, name: true, description: true },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.ticket.count({ where }),
+    ]);
+
+    const map = {};
+    ticketTypes.forEach((tt) => {
+      map[tt.id] = {
+        id: tt.id,
+        name: tt.name,
+        description: tt.description,
+        total: 0,
+        open: 0,
+        inProgress: 0,
+        pending: 0,
+        resolved: 0,
+        closed: 0,
+        percentage: 0,
+      };
+    });
+
+    categoryStats.forEach((row) => {
+      const item = map[row.ticketTypeId];
+      if (item) {
+        const count = Number(row._count.id);
+        item.total += count;
+        if (row.status === 'OPEN') item.open += count;
+        else if (row.status === 'IN_PROGRESS') item.inProgress += count;
+        else if (row.status === 'PENDING' || row.status === 'ON_HOLD') item.pending += count;
+        else if (row.status === 'RESOLVED') item.resolved += count;
+        else if (row.status === 'CLOSED') item.closed += count;
+      }
+    });
+
+    return Object.values(map)
+      .map((cat) => ({
+        ...cat,
+        percentage: totalTickets > 0 ? Math.round((cat.total / totalTickets) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }
+
+  async getGroupReport(where = {}) {
+    const [groupStats, groups, totalTickets] = await Promise.all([
+      prisma.ticket.groupBy({
+        by: ['groupId', 'status'],
+        where,
+        _count: { id: true },
+      }),
+      prisma.group.findMany({
+        select: { id: true, name: true, description: true },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.ticket.count({ where }),
+    ]);
+
+    const map = {};
+    groups.forEach((g) => {
+      map[g.id] = {
+        id: g.id,
+        name: g.name,
+        description: g.description,
+        total: 0,
+        open: 0,
+        inProgress: 0,
+        pending: 0,
+        resolved: 0,
+        closed: 0,
+        resolutionRate: 0,
+        percentage: 0,
+      };
+    });
+
+    groupStats.forEach((row) => {
+      const item = map[row.groupId];
+      if (item) {
+        const count = Number(row._count.id);
+        item.total += count;
+        if (row.status === 'OPEN') item.open += count;
+        else if (row.status === 'IN_PROGRESS') item.inProgress += count;
+        else if (row.status === 'PENDING' || row.status === 'ON_HOLD') item.pending += count;
+        else if (row.status === 'RESOLVED') item.resolved += count;
+        else if (row.status === 'CLOSED') item.closed += count;
+      }
+    });
+
+    return Object.values(map)
+      .map((grp) => {
+        const completed = grp.resolved + grp.closed;
+        const resolutionRate = grp.total > 0 ? Math.round((completed / grp.total) * 100) : 0;
+        const percentage = totalTickets > 0 ? Math.round((grp.total / totalTickets) * 100) : 0;
+        return {
+          ...grp,
+          resolutionRate,
+          percentage,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+  }
+
+  async getAgentReport(where = {}) {
+    const [agentStats, agents] = await Promise.all([
+      prisma.ticket.groupBy({
+        by: ['agentId', 'status'],
+        where,
+        _count: { id: true },
+      }),
+      prisma.user.findMany({
+        where: {
+          role: { name: { in: ['AGENT', 'ADMIN', 'SUPER_ADMIN'] } },
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          employeeId: true,
+          role: { select: { name: true } },
+        },
+        orderBy: { name: 'asc' },
+      }),
+    ]);
+
+    const map = {};
+    agents.forEach((ag) => {
+      map[ag.id] = {
+        id: ag.id,
+        name: ag.name,
+        email: ag.email,
+        employeeId: ag.employeeId,
+        role: ag.role?.name || 'AGENT',
+        total: 0,
+        open: 0,
+        inProgress: 0,
+        pending: 0,
+        resolved: 0,
+        closed: 0,
+        resolutionRate: 0,
+      };
+    });
+
+    const unassigned = {
+      id: null,
+      name: 'Unassigned',
+      email: '-',
+      employeeId: '-',
+      role: 'QUEUE',
+      total: 0,
+      open: 0,
+      inProgress: 0,
+      pending: 0,
+      resolved: 0,
+      closed: 0,
+      resolutionRate: 0,
+    };
+
+    agentStats.forEach((row) => {
+      const count = Number(row._count.id);
+      if (row.agentId === null) {
+        unassigned.total += count;
+        if (row.status === 'OPEN') unassigned.open += count;
+        else if (row.status === 'IN_PROGRESS') unassigned.inProgress += count;
+        else if (row.status === 'PENDING' || row.status === 'ON_HOLD') unassigned.pending += count;
+        else if (row.status === 'RESOLVED') unassigned.resolved += count;
+        else if (row.status === 'CLOSED') unassigned.closed += count;
+      } else if (map[row.agentId]) {
+        const item = map[row.agentId];
+        item.total += count;
+        if (row.status === 'OPEN') item.open += count;
+        else if (row.status === 'IN_PROGRESS') item.inProgress += count;
+        else if (row.status === 'PENDING' || row.status === 'ON_HOLD') item.pending += count;
+        else if (row.status === 'RESOLVED') item.resolved += count;
+        else if (row.status === 'CLOSED') item.closed += count;
+      }
+    });
+
+    const result = Object.values(map).map((ag) => {
+      const completed = ag.resolved + ag.closed;
+      const resolutionRate = ag.total > 0 ? Math.round((completed / ag.total) * 100) : 0;
+      return {
+        ...ag,
+        resolutionRate,
+      };
+    });
+
+    if (unassigned.total > 0) {
+      const completed = unassigned.resolved + unassigned.closed;
+      unassigned.resolutionRate = unassigned.total > 0 ? Math.round((completed / unassigned.total) * 100) : 0;
+      result.push(unassigned);
+    }
+
+    return result.sort((a, b) => b.total - a.total);
+  }
 }
 
 export default new DashboardRepository();

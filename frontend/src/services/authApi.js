@@ -12,6 +12,16 @@ export const authApi = {
     return res.data;
   },
 
+  updateProfile: async (data) => {
+    const res = await api.put('/auth/profile', data);
+    return res.data;
+  },
+
+  changePassword: async (passwords) => {
+    const res = await api.put('/auth/change-password', passwords);
+    return res.data;
+  },
+
   logout: async () => {
     const res = await api.post('/auth/logout');
     return res.data;

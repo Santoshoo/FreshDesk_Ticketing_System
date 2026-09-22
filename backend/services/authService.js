@@ -93,12 +93,81 @@ export class AuthService {
       email: user.email,
       employeeId: user.employeeId,
       mobile: user.mobile,
-      role: user.role.name,
+      role: user.role?.name || null,
       department: user.department?.name || null,
       departmentId: user.departmentId,
       status: user.status,
       groups: user.agentGroups?.map((ag) => ag.group) || [],
     };
+  }
+
+  async updateProfile(userId, { name, mobile }) {
+    if (!name || !name.trim()) {
+      const err = new Error('Full Name is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const existing = await userRepository.findById(parseInt(userId, 10));
+    if (!existing) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const updateData = {
+      name: name.trim(),
+    };
+    if (mobile !== undefined) {
+      updateData.mobile = mobile ? mobile.trim() : null;
+    }
+
+    const updated = await userRepository.update(existing.id, updateData);
+
+    return {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      employeeId: updated.employeeId,
+      mobile: updated.mobile,
+      role: updated.role?.name || null,
+      department: updated.department?.name || null,
+      departmentId: updated.departmentId,
+      status: updated.status,
+    };
+  }
+
+  async changePassword(userId, currentPassword, newPassword) {
+    if (!currentPassword || !newPassword) {
+      const err = new Error('Current password and new password are required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    if (newPassword.length < 6) {
+      const err = new Error('New password must be at least 6 characters');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const user = await userRepository.findById(parseInt(userId, 10));
+    if (!user) {
+      const err = new Error('User not found');
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      const err = new Error('Current password is incorrect');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await userRepository.update(user.id, { passwordHash });
+
+    return { message: 'Password updated successfully' };
   }
 }
 

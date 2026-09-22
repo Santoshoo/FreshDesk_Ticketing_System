@@ -30,6 +30,36 @@ export class DashboardController {
       next(error);
     }
   }
+
+  async getCategoryReport(req, res, next) {
+    try {
+      const { scope } = req.query;
+      const data = await dashboardService.getCategoryReport(req.user, scope);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getGroupReport(req, res, next) {
+    try {
+      const { scope } = req.query;
+      const data = await dashboardService.getGroupReport(req.user, scope);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getAgentReport(req, res, next) {
+    try {
+      const { scope } = req.query;
+      const data = await dashboardService.getAgentReport(req.user, scope);
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new DashboardController();

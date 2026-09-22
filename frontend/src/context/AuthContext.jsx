@@ -66,6 +66,22 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Update user state directly (e.g. after profile edit)
+  const updateUser = (updatedData) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedData } : updatedData));
+  };
+
+  const refreshUser = async () => {
+    try {
+      const res = await authApi.getMe();
+      if (res.success && res.data) {
+        setUser(res.data);
+      }
+    } catch (e) {
+      console.warn('Failed to refresh user:', e.message);
+    }
+  };
+
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const isAgent = user?.role === 'AGENT';
@@ -79,6 +95,8 @@ export function AuthProvider({ children }) {
         loading,
         login,
         logout,
+        updateUser,
+        refreshUser,
         isAdmin,
         isSuperAdmin,
         isAgent,
