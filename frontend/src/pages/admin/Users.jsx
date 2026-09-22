@@ -11,11 +11,16 @@ import {
   X,
   ChevronDown,
   Check,
+  FileSpreadsheet,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import userApi from '../../services/userApi.js';
 import departmentApi from '../../services/departmentApi.js';
 import employeeEmailApi from '../../services/employeeEmailApi.js';
 import { Modal, EmptyState } from '../../components/ui/index.jsx';
+import BulkUserUploadModal from '../../components/modals/BulkUserUploadModal.jsx';
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -51,6 +56,22 @@ export default function Users() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // Bulk Upload Modal State
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+
+  // Sorting State (Ascending order by default)
+  const [sortBy, setSortBy] = useState('id');
+  const [sortOrder, setSortOrder] = useState('asc');
+
+  const handleSort = (field) => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
+    }
+  };
 
   // Form State
   const [formData, setFormData] = useState({
@@ -160,11 +181,11 @@ export default function Users() {
     }
   };
 
-  // Fetch users list — re-runs when search changes
+  // Fetch users list — re-runs when search, sortBy, or sortOrder changes
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const usersRes = await userApi.list({ search, limit: 100 });
+      const usersRes = await userApi.list({ search, limit: 100, sortBy, sortOrder });
       if (usersRes.success) setUsers(usersRes.data || []);
     } catch (err) {
       console.error('Failed to load users data:', err);
@@ -178,10 +199,10 @@ export default function Users() {
     fetchReferenceData();
   }, []);
 
-  // Users list: fetch on mount and whenever search changes
+  // Users list: fetch on mount and whenever search or sort parameters change
   useEffect(() => {
     fetchUsers();
-  }, [search]);
+  }, [search, sortBy, sortOrder]);
 
   // Open Create Modal
   const openCreateModal = () => {
@@ -343,13 +364,24 @@ export default function Users() {
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-xs text-xs transition-all active:scale-[0.98] cursor-pointer"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Add User</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setIsBulkModalOpen(true)}
+            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3.5 rounded-xl shadow-xs text-xs transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4 stroke-[2.2]" />
+            <span>Bulk Upload</span>
+          </button>
+
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl shadow-xs text-xs transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span>Add User</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -392,12 +424,64 @@ export default function Users() {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 text-slate-600 font-bold border-b border-slate-200/70 text-[11px]">
                 <tr>
-                  <th className="px-5 py-3.5">Name</th>
-                  <th className="px-5 py-3.5">Email</th>
-                  <th className="px-5 py-3.5">Employee ID</th>
+                  <th
+                    onClick={() => handleSort('name')}
+                    className="px-5 py-3.5 cursor-pointer hover:text-slate-900 transition-colors select-none"
+                    title="Click to sort by Name"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Name</span>
+                      {sortBy === 'name' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-60 hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('email')}
+                    className="px-5 py-3.5 cursor-pointer hover:text-slate-900 transition-colors select-none"
+                    title="Click to sort by Email"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Email</span>
+                      {sortBy === 'email' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-60 hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSort('employeeId')}
+                    className="px-5 py-3.5 cursor-pointer hover:text-slate-900 transition-colors select-none"
+                    title="Click to sort by Employee ID"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Employee ID</span>
+                      {sortBy === 'employeeId' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-60 hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
                   <th className="px-5 py-3.5">Department</th>
                   <th className="px-5 py-3.5">Role</th>
-                  <th className="px-5 py-3.5">Status</th>
+                  <th
+                    onClick={() => handleSort('status')}
+                    className="px-5 py-3.5 cursor-pointer hover:text-slate-900 transition-colors select-none"
+                    title="Click to sort by Status"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Status</span>
+                      {sortBy === 'status' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="w-3 h-3 text-blue-600" /> : <ArrowDown className="w-3 h-3 text-blue-600" />
+                      ) : (
+                        <ArrowUpDown className="w-3 h-3 text-slate-300 opacity-60 hover:opacity-100" />
+                      )}
+                    </div>
+                  </th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -854,6 +938,13 @@ export default function Users() {
           </div>
         )}
       </Modal>
+
+      {/* Bulk User Upload Modal */}
+      <BulkUserUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onSuccess={fetchUsers}
+      />
     </div>
   );
 }

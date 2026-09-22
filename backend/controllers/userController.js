@@ -4,8 +4,8 @@ import userRepository from '../repositories/userRepository.js';
 export class UserController {
   async list(req, res, next) {
     try {
-      const { page, limit, search, role, departmentId } = req.query;
-      const result = await userService.listUsers({ page, limit, search, role, departmentId });
+      const { page, limit, search, role, departmentId, sortBy, sortOrder } = req.query;
+      const result = await userService.listUsers({ page, limit, search, role, departmentId, sortBy, sortOrder });
       res.json({ success: true, data: result.users, pagination: result.pagination });
     } catch (error) {
       next(error);
@@ -95,6 +95,17 @@ export class UserController {
     try {
       await userService.deleteUser(req.params.id);
       res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async bulkUpload(req, res, next) {
+    try {
+      const { records, users } = req.body;
+      const list = records || users || [];
+      const result = await userService.bulkUploadUsers(list);
+      res.json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

@@ -57,12 +57,12 @@ export class UserRepository {
     });
   }
 
-  async findMany({ skip = 0, take = 50, where = {} } = {}) {
+  async findMany({ skip = 0, take = 50, where = {}, orderBy = { id: 'asc' } } = {}) {
     return prisma.user.findMany({
       where,
       skip,
       take,
-      orderBy: { createdAt: 'desc' },
+      orderBy,
       select: {
         id: true,
         name: true,
