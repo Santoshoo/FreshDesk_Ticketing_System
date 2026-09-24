@@ -39,7 +39,7 @@ export function generateTicketEmail({
     `Subject: ${ticket.subject}`,
     `Group: ${groupName || 'N/A'}`,
     `Type: ${ticketTypeName || 'N/A'}`,
-    `Description: ${ticket.description}`,
+    `Description: ${stripHtmlToText(ticket.description)}`,
     `Ticket Number: ${formattedTicketNumber}`,
     ...(!isCreated ? [`Status: ${ticket.status || 'CLOSED'}`] : []),
     '',
@@ -55,6 +55,21 @@ export function generateTicketEmail({
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${escapeHtml(ticket.subject)}</title>
+  <style>
+    .ticket-description-content p {
+      margin: 0 0 8px 0;
+    }
+    .ticket-description-content p:last-child {
+      margin-bottom: 0;
+    }
+    .ticket-description-content ul, .ticket-description-content ol {
+      margin: 0 0 8px 0;
+      padding-left: 20px;
+    }
+    .ticket-description-content li {
+      margin-bottom: 4px;
+    }
+  </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f7fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f4f7fb; padding: 30px 15px;">
@@ -110,8 +125,10 @@ export function generateTicketEmail({
                   <td style="padding: 10px 16px; font-weight: 600; color: #475569; vertical-align: top; border-bottom: 1px solid #e2e8f0;">
                     Description:
                   </td>
-                  <td style="padding: 10px 16px; color: #334155; white-space: pre-wrap; word-break: break-word; border-bottom: 1px solid #e2e8f0;">
-                    ${escapeHtml(ticket.description)}
+                  <td style="padding: 10px 16px; color: #334155; word-break: break-word; border-bottom: 1px solid #e2e8f0; line-height: 1.6;">
+                    <div class="ticket-description-content" style="margin: 0; line-height: 1.6; color: #334155;">
+                      ${formatDescriptionHtml(ticket.description)}
+                    </div>
                   </td>
                 </tr>
                 <tr>
@@ -168,6 +185,45 @@ export function generateTicketEmail({
 </html>`;
 
   return { html, text: plainText };
+}
+
+function formatDescriptionHtml(desc) {
+  if (!desc) return '';
+  const trimmed = String(desc).trim();
+  // Check if content contains HTML tags (e.g. from rich text editor)
+  const hasHtmlTags = /<(?:p|div|span|strong|b|em|i|u|s|strike|ul|ol|li|h[1-6]|blockquote|pre|code|a|br|hr|table)\b[^>]*>/i.test(trimmed);
+
+  if (hasHtmlTags) {
+    // Sanitize any dangerous scripts, iframes, objects or event handlers while keeping safe formatting tags
+    return trimmed
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+      .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+      .replace(/<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi, '')
+      .replace(/\s*on\w+\s*=\s*(["'][^"']*["']|[^\s>]+)/gi, '');
+  }
+  // Plain text content: escape HTML entities and convert newlines to <br/>
+  return escapeHtml(trimmed).replace(/\r\n|\n|\r/g, '<br/>');
+}
+
+function stripHtmlToText(html) {
+  if (!html) return '';
+  return String(html)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#039;/gi, "'")
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function escapeHtml(string) {
