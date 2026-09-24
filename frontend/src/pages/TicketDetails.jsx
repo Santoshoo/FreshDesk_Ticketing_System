@@ -19,8 +19,13 @@ import {
   ChevronDown,
   Bold,
   Italic,
+  Underline,
   List,
 } from 'lucide-react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import UnderlineExt from '@tiptap/extension-underline';
+import LinkExt from '@tiptap/extension-link';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import ticketApi from '../services/ticketApi.js';
@@ -29,6 +34,179 @@ import ticketTypeApi from '../services/ticketTypeApi.js';
 import { Modal, EmptyState } from '../components/ui/index.jsx';
 import TicketCloseModal from '../components/modals/TicketCloseModal.jsx';
 import { canEditTicket, canDeleteTicket } from '../utils/ticketPermissions.js';
+
+function DescriptionEditor({ initialContent, onChange }) {
+  const [formatDropdownOpen, setFormatDropdownOpen] = useState(false);
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      UnderlineExt,
+      LinkExt.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-indigo-600 underline hover:text-indigo-800',
+        },
+      }),
+    ],
+    content: initialContent || '',
+    onUpdate: ({ editor }) => {
+      const html = editor.isEmpty ? '' : editor.getHTML();
+      onChange(html);
+    },
+  });
+
+  useEffect(() => {
+    if (editor && initialContent !== undefined) {
+      const currentHTML = editor.getHTML();
+      if (initialContent !== currentHTML && (initialContent || !editor.isEmpty)) {
+        editor.commands.setContent(initialContent || '');
+      }
+    }
+  }, [initialContent, editor]);
+
+  const getCurrentHeading = () => {
+    if (!editor) return 'Paragraph';
+    if (editor.isActive('heading', { level: 1 })) return 'Heading 1';
+    if (editor.isActive('heading', { level: 2 })) return 'Heading 2';
+    if (editor.isActive('heading', { level: 3 })) return 'Heading 3';
+    return 'Paragraph';
+  };
+
+  return (
+    <div className="border border-slate-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all bg-white">
+      {/* Toolbar */}
+      <div className="bg-slate-50 border-b border-slate-200 px-3 py-1.5 flex items-center gap-1 text-slate-600 flex-wrap relative text-xs">
+        {/* Paragraph / Heading Dropdown */}
+        <div className="relative">
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => setFormatDropdownOpen(!formatDropdownOpen)}
+            className="px-2 py-1 hover:bg-slate-200/80 rounded text-[11px] font-semibold text-slate-700 flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <span>{getCurrentHeading()}</span>
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+
+          {formatDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setFormatDropdownOpen(false)}
+              />
+              <div className="absolute left-0 top-full mt-1 w-32 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 text-xs">
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    editor?.chain().focus().setParagraph().run();
+                    setFormatDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 hover:bg-slate-50 cursor-pointer ${
+                    editor?.isActive('paragraph') ? 'text-indigo-600 font-bold bg-indigo-50/50' : 'text-slate-700'
+                  }`}
+                >
+                  Paragraph
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    editor?.chain().focus().toggleHeading({ level: 1 }).run();
+                    setFormatDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 hover:bg-slate-50 text-xs font-bold cursor-pointer ${
+                    editor?.isActive('heading', { level: 1 }) ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-700'
+                  }`}
+                >
+                  Heading 1
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    editor?.chain().focus().toggleHeading({ level: 2 }).run();
+                    setFormatDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 hover:bg-slate-50 text-xs font-bold cursor-pointer ${
+                    editor?.isActive('heading', { level: 2 }) ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-700'
+                  }`}
+                >
+                  Heading 2
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        <span className="w-px h-3.5 bg-slate-300 mx-1"></span>
+
+        {/* Bold */}
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor?.chain().focus().toggleBold().run()}
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
+            editor?.isActive('bold') ? 'bg-indigo-100 text-indigo-700 font-bold' : 'hover:bg-slate-200 text-slate-600'
+          }`}
+          title="Bold (Ctrl+B)"
+        >
+          <Bold className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Italic */}
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor?.chain().focus().toggleItalic().run()}
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
+            editor?.isActive('italic') ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-200 text-slate-600'
+          }`}
+          title="Italic (Ctrl+I)"
+        >
+          <Italic className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Underline */}
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor?.chain().focus().toggleUnderline().run()}
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
+            editor?.isActive('underline') ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-200 text-slate-600'
+          }`}
+          title="Underline (Ctrl+U)"
+        >
+          <Underline className="w-3.5 h-3.5" />
+        </button>
+
+        <span className="w-px h-3.5 bg-slate-300 mx-1"></span>
+
+        {/* Bullet List */}
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => editor?.chain().focus().toggleBulletList().run()}
+          className={`p-1.5 rounded transition-colors cursor-pointer ${
+            editor?.isActive('bulletList') ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-slate-200 text-slate-600'
+          }`}
+          title="Bullet List"
+        >
+          <List className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Visual Editor Content Area */}
+      <div
+        onClick={() => editor?.commands.focus()}
+        className="min-h-[140px] max-h-[240px] overflow-y-auto p-3.5 text-xs text-slate-800 bg-white cursor-text leading-relaxed prose prose-sm max-w-none focus:outline-none"
+      >
+        <EditorContent editor={editor} />
+      </div>
+    </div>
+  );
+}
 
 export default function TicketDetails() {
   const { id } = useParams();
@@ -55,11 +233,13 @@ export default function TicketDetails() {
 
   // Update Ticket Properties Modal State
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [updateSubject, setUpdateSubject] = useState('');
   const [updateStatus, setUpdateStatus] = useState('OPEN');
   const [updatePriority, setUpdatePriority] = useState('MEDIUM');
   const [updateGroupId, setUpdateGroupId] = useState('');
   const [updateTicketTypeId, setUpdateTicketTypeId] = useState('');
   const [updateAgentId, setUpdateAgentId] = useState('');
+  const [updateDescription, setUpdateDescription] = useState('');
   const [updateComment, setUpdateComment] = useState('');
   const [updatingTicket, setUpdatingTicket] = useState(false);
   const [updateError, setUpdateError] = useState('');
@@ -118,11 +298,13 @@ export default function TicketDetails() {
 
   const openEditPropertiesModal = () => {
     if (!ticket) return;
+    setUpdateSubject(ticket.subject || '');
     setUpdateStatus(ticket.status);
     setUpdatePriority(ticket.priority || 'MEDIUM');
     setUpdateGroupId(ticket.groupId ? String(ticket.groupId) : '');
     setUpdateTicketTypeId(ticket.ticketTypeId ? String(ticket.ticketTypeId) : '');
     setUpdateAgentId(ticket.agentId ? String(ticket.agentId) : '');
+    setUpdateDescription(ticket.description || '');
     setUpdateComment('');
     setUpdateError('');
     if (ticket.groupId) {
@@ -191,11 +373,13 @@ export default function TicketDetails() {
       setUpdateError('');
 
       await ticketApi.update(id, {
+        subject: updateSubject ? updateSubject.trim() : undefined,
         status: updateStatus,
         priority: updatePriority,
         groupId: updateGroupId ? parseInt(updateGroupId, 10) : undefined,
         ticketTypeId: updateTicketTypeId ? parseInt(updateTicketTypeId, 10) : undefined,
         agentId: updateAgentId ? parseInt(updateAgentId, 10) : null,
+        description: updateDescription !== undefined ? updateDescription.trim() : undefined,
       });
 
       if (updateComment.trim()) {
@@ -456,7 +640,9 @@ export default function TicketDetails() {
           </div>
 
           {/* Cards 2..N: Comments Thread */}
-          {ticket.comments && ticket.comments.map((c) => {
+          {ticket.comments && ticket.comments
+            .filter((c) => c.body?.trim() !== ticket.description?.trim())
+            .map((c) => {
             const isAgentComment =
               c.user?.role === 'AGENT' ||
               c.user?.role === 'ADMIN' ||
@@ -504,9 +690,16 @@ export default function TicketDetails() {
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line pt-1">
-                  {c.body}
-                </p>
+                {c.body && /<[a-z][\s\S]*>/i.test(c.body) ? (
+                  <div
+                    className="text-xs text-slate-700 leading-relaxed pt-1 space-y-1.5 [&_p]:mb-1.5 [&_strong]:font-bold [&_em]:italic [&_u]:underline [&_s]:line-through [&_code]:bg-slate-100 [&_code]:text-indigo-600 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-indigo-600 [&_a]:underline [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-bold"
+                    dangerouslySetInnerHTML={{ __html: c.body }}
+                  />
+                ) : (
+                  <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line pt-1">
+                    {c.body}
+                  </p>
+                )}
               </div>
             );
           })}
@@ -618,36 +811,39 @@ export default function TicketDetails() {
               Ticket Info
             </h3>
             <div className="space-y-2.5 divide-y divide-slate-100 text-xs">
-              <div className="flex items-center justify-between py-1">
-                <span className="text-slate-400 font-medium">ID</span>
-                <span className="font-mono font-bold text-slate-800">#{ticket.ticketNumber}</span>
+              <div className="flex items-center justify-between gap-3 py-1">
+                <span className="text-slate-400 font-medium shrink-0">ID</span>
+                <span className="font-mono font-bold text-slate-800 text-right">#{ticket.ticketNumber}</span>
               </div>
-              <div className="flex items-center justify-between pt-2.5">
-                <span className="text-slate-400 font-medium">Type</span>
-                <span className="font-semibold text-slate-800">
+              <div className="flex items-center justify-between gap-3 pt-2.5">
+                <span className="text-slate-400 font-medium shrink-0">Type</span>
+                <span className="font-semibold text-slate-800 text-right">
                   {ticket.ticketType?.name || 'Support'}
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-2.5">
-                <span className="text-slate-400 font-medium">Priority</span>
+              <div className="flex items-center justify-between gap-3 pt-2.5">
+                <span className="text-slate-400 font-medium shrink-0">Priority</span>
                 <span
-                  className={`font-bold ${
+                  className={`font-bold text-right ${
                     isHigh ? 'text-rose-600' : isLow ? 'text-emerald-600' : 'text-amber-600'
                   }`}
                 >
                   {priority}
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-2.5">
-                <span className="text-slate-400 font-medium">Assigned Agent</span>
-                <span className="font-semibold text-slate-800">
+              <div className="flex items-start justify-between gap-3 pt-2.5">
+                <span className="text-slate-400 font-medium shrink-0 pt-0.5">Assigned Agent</span>
+                <span className="font-semibold text-slate-800 text-right break-words max-w-[65%]">
                   {ticket.agent?.name || 'Unassigned'}
                 </span>
               </div>
-              <div className="flex items-center justify-between pt-2.5">
-                <span className="text-slate-400 font-medium">Group</span>
-                <span className="font-semibold text-slate-800">
-                  {ticket.group?.name || 'Clinical Systems Support'}
+              <div className="flex items-start justify-between gap-3 pt-2.5">
+                <span className="text-slate-400 font-medium shrink-0 pt-0.5">Group</span>
+                <span
+                  className="font-semibold text-slate-800 text-right max-w-[65%] leading-relaxed"
+                  style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                >
+                  {ticket.group?.name ? ticket.group.name.replace(/\//g, ' / ') : 'Clinical Systems Support'}
                 </span>
               </div>
             </div>
@@ -757,12 +953,12 @@ export default function TicketDetails() {
         </div>
       </div>
 
-      {/* Screen 6: Edit Ticket Properties Modal with Logic-based Group/Agent Selection */}
+      {/* Screen 6: Edit Ticket Properties Modal with Description Editor */}
       <Modal
         isOpen={isUpdateModalOpen}
         onClose={() => setIsUpdateModalOpen(false)}
         title="Edit Ticket Properties"
-        maxWidth="max-w-md"
+        maxWidth="max-w-2xl"
       >
         {updateError && (
           <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
@@ -771,69 +967,91 @@ export default function TicketDetails() {
           </div>
         )}
 
-        <form onSubmit={handleUpdateTicketSubmit} className="space-y-4">
-          {/* 1. Status Dropdown */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Status <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={updateStatus}
-              onChange={(e) => setUpdateStatus(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
-              onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <option value="OPEN">🟢 Open</option>
-              <option value="PENDING">🟡 Pending</option>
-              <option value="IN_PROGRESS">🔵 In Progress</option>
-              <option value="RESOLVED">✅ Resolved</option>
-              <option value="CLOSED">⚪ Closed</option>
-            </select>
+        <form onSubmit={handleUpdateTicketSubmit} className="space-y-4 max-h-[82vh] overflow-y-auto pr-1">
+          {/* Top 2-Column Grid for Properties */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* 1. Status Dropdown */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Status <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={updateStatus}
+                onChange={(e) => setUpdateStatus(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
+                onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+                onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <option value="OPEN">🟢 Open</option>
+                <option value="PENDING">🟡 Pending</option>
+                <option value="IN_PROGRESS">🔵 In Progress</option>
+                <option value="RESOLVED">✅ Resolved</option>
+                <option value="CLOSED">⚪ Closed</option>
+              </select>
+            </div>
+
+            {/* 2. Priority Dropdown */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Priority <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={updatePriority}
+                onChange={(e) => setUpdatePriority(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
+                onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+                onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <option value="HIGH">🔴 High</option>
+                <option value="MEDIUM">🟡 Medium</option>
+                <option value="LOW">🟢 Low</option>
+                <option value="URGENT">🔥 Urgent</option>
+              </select>
+            </div>
+
+            {/* 3. Ticket Type Dropdown */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Ticket Type <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={updateTicketTypeId}
+                onChange={(e) => setUpdateTicketTypeId(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
+                onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
+                onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
+              >
+                <option value="">Select Type</option>
+                {ticketTypes.map((tt) => (
+                  <option key={tt.id} value={tt.id}>
+                    {tt.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 4. Support Group Dropdown */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Support Group <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={updateGroupId}
+                onChange={(e) => handleGroupChange(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 font-medium"
+              >
+                <option value="">Select Group</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Changing group automatically updates the agent list</span>
+            </div>
           </div>
 
-          {/* 2. Ticket Type Dropdown */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Ticket Type <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={updateTicketTypeId}
-              onChange={(e) => setUpdateTicketTypeId(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
-              onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <option value="">Select Type</option>
-              {ticketTypes.map((tt) => (
-                <option key={tt.id} value={tt.id}>
-                  {tt.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* 3. Support Group Dropdown */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Support Group <span className="text-rose-500">*</span>
-            </label>
-            <select
-              value={updateGroupId}
-              onChange={(e) => handleGroupChange(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800 font-medium"
-            >
-              <option value="">Select Group</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">Changing group automatically updates the agent list</span>
-          </div>
-
-          {/* 4. Agent Name Dropdown (Filtered by selected group based on logic) */}
+          {/* 5. Agent Name Dropdown */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Agent Name
@@ -852,33 +1070,45 @@ export default function TicketDetails() {
             </select>
           </div>
 
-          {/* 5. Priority Dropdown */}
+          {/* 6. Subject Field */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-              Priority <span className="text-rose-500">*</span>
+              Subject <span className="text-rose-500">*</span>
             </label>
-            <select
-              value={updatePriority}
-              onChange={(e) => setUpdatePriority(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all"
+            <input
+              type="text"
+              value={updateSubject}
+              onChange={(e) => setUpdateSubject(e.target.value)}
+              placeholder="e.g. Billing Issue or Consultation Cancel"
+              className="w-full px-3.5 py-2.5 text-xs bg-white border border-slate-300 rounded-xl text-slate-800 focus:outline-none transition-all font-semibold"
               onFocus={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)'; }}
               onBlur={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.boxShadow = 'none'; }}
-            >
-              <option value="HIGH">🔴 High</option>
-              <option value="MEDIUM">🟡 Medium</option>
-              <option value="LOW">🟢 Low</option>
-              <option value="URGENT">🔥 Urgent</option>
-            </select>
+              required
+            />
           </div>
 
-          {/* 6. Optional Internal Note */}
+          {/* 7. Description with Visual Rich Formatting */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700">
+                Ticket Description <span className="text-rose-500">*</span>
+              </label>
+              <span className="text-[10px] text-slate-400">Edit issue description or notes</span>
+            </div>
+            <DescriptionEditor
+              initialContent={updateDescription}
+              onChange={(val) => setUpdateDescription(val)}
+            />
+          </div>
+
+          {/* 7. Optional Internal Note */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1.5">
               Reason / Internal Note <span className="text-slate-400 font-normal">(Optional)</span>
             </label>
             <textarea
               rows={2}
-              placeholder="e.g. Reassigned to HR specialist for approval..."
+              placeholder="e.g. Corrected ticket details, updated patient/invoice notes..."
               value={updateComment}
               onChange={(e) => setUpdateComment(e.target.value)}
               className="w-full p-2.5 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-slate-800"
@@ -899,7 +1129,7 @@ export default function TicketDetails() {
               className="px-5 py-2 text-white rounded-xl text-xs font-bold shadow-md disabled:opacity-50 cursor-pointer"
               style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', boxShadow: '0 4px 12px rgba(99,102,241,0.3)' }}
             >
-              {updatingTicket ? 'Updating...' : 'Submit'}
+              {updatingTicket ? 'Updating...' : 'Save Changes'}
             </button>
           </div>
         </form>

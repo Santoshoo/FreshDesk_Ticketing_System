@@ -11,8 +11,8 @@ async function startServer() {
     await prisma.$connect();
     logger.info('Connected to MySQL database via Prisma successfully.');
 
-    app.listen(PORT, () => {
-      logger.info(`KIMS ICT Service Desk backend server running on port ${PORT} [${config.nodeEnv}]`);
+    app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`KIMS ICT Service Desk backend server running on http://0.0.0.0:${PORT} [${config.nodeEnv}]`);
     });
   } catch (error) {
     logger.error('Failed to start backend server:', error);

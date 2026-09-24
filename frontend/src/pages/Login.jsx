@@ -310,16 +310,6 @@ export default function Login() {
               Quick-fill test role
             </p>
             <div className="flex items-center gap-3">
-              {/* Super Admin Pill */}
-              <button
-                type="button"
-                onClick={() => fillCredentials('admin@kims.hospital', 'Kims@123')}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#fed7aa]/90 hover:bg-[#fed7aa] text-amber-900 text-xs font-semibold border border-amber-300/80 transition-all cursor-pointer active:scale-95 shadow-2xs"
-              >
-                <span>👑</span>
-                <span>Super Admin</span>
-              </button>
-
               {/* Admin Pill */}
               <button
                 type="button"

@@ -147,14 +147,6 @@ export class TicketService {
         },
       });
 
-      await tx.ticketComment.create({
-        data: {
-          ticketId: ticket.id,
-          userId: creatorUser.id,
-          commentType: 'REPLY',
-          body: description.trim(),
-        },
-      });
 
       await tx.ticketStatusHistory.create({
         data: {
@@ -377,6 +369,36 @@ export class TicketService {
 
     const previousStatus = ticket.status;
     const updated = await ticketRepository.updateTicket(ticketId, updateData);
+
+    const numericTicketId = typeof ticketId === 'string' ? BigInt(ticketId) : ticketId;
+
+    // Track status transition history if changed
+    if (updateData.status && updateData.status !== previousStatus) {
+      await prisma.ticketStatusHistory.create({
+        data: {
+          ticketId: numericTicketId,
+          oldStatus: previousStatus,
+          newStatus: updateData.status,
+          changedBy: user.id,
+        },
+      }).catch((err) => logger.warn(`Failed to record status history: ${err.message}`));
+    }
+
+    // Track group / agent assignment history if changed
+    const groupChanged = updateData.groupId && updateData.groupId !== ticket.groupId;
+    const agentChanged = updateData.agentId !== undefined && updateData.agentId !== ticket.agentId;
+    if (groupChanged || agentChanged) {
+      await prisma.ticketAssignmentHistory.create({
+        data: {
+          ticketId: numericTicketId,
+          oldGroupId: ticket.groupId || null,
+          newGroupId: updateData.groupId || ticket.groupId || null,
+          oldAgentId: ticket.agentId || null,
+          newAgentId: updateData.agentId !== undefined ? updateData.agentId : (ticket.agentId || null),
+          changedBy: user.id,
+        },
+      }).catch((err) => logger.warn(`Failed to record assignment history: ${err.message}`));
+    }
 
     // TRIGGER TICKET CLOSED NOTIFICATIONS (Requirements 3, 14, 21):
     // Only when status actually transitions to CLOSED from another status
