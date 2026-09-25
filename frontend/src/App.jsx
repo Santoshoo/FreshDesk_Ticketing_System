@@ -12,7 +12,7 @@ import CreateTicket from './pages/CreateTicket.jsx';
 import TicketDetails from './pages/TicketDetails.jsx';
 import TicketLogs from './pages/TicketLogs.jsx';
 import Reports from './pages/Reports.jsx';
-import Settings from './pages/Settings.jsx';
+import Profile from './pages/Profile.jsx';
 
 import Users from './pages/admin/Users.jsx';
 import Departments from './pages/admin/Departments.jsx';
@@ -73,7 +73,8 @@ export default function App() {
               <Route path="/tickets/logs" element={<TicketLogs />} />
               <Route path="/tickets/:id" element={<TicketDetails />} />
               <Route path="/reports" element={<Reports />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Navigate to="/profile" replace />} />
 
               {/* Admin Master Data Routes */}
               <Route

@@ -6,7 +6,7 @@ import {
   Inbox,
   PlusCircle,
   BarChart3,
-  Settings,
+  User,
   Users,
   Building2,
   FolderKanban,
@@ -113,7 +113,7 @@ export default function Sidebar({ isOpen, onClose }) {
           <NavItem to="/tickets" end icon={Ticket} label="All Tickets" onClick={onClose} />
           <NavItem to="/tickets/create" icon={PlusCircle} label="Create Ticket" onClick={onClose} />
           <NavItem to="/reports" icon={BarChart3} label="Reports" onClick={onClose} />
-          <NavItem to="/settings" icon={Settings} label="Settings" onClick={onClose} />
+          <NavItem to="/profile" icon={User} label="Profile" onClick={onClose} />
 
           {(user?.role === 'AGENT' || user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
             <NavItem to="/tickets/logs" icon={History} label="Ticket Logs" onClick={onClose} />

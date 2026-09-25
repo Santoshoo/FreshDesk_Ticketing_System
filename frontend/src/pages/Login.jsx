@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, User, CheckCircle2, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import kimsLogo from '../assets/kims-logo.png';
 import ResetPasswordModal from '../components/modals/ResetPasswordModal.jsx';
@@ -14,6 +14,7 @@ export default function Login() {
   const [savedEmpId, setSavedEmpId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [showResetModal, setShowResetModal] = useState(false);
 
   const { login } = useAuth();
@@ -99,6 +100,7 @@ export default function Login() {
     try {
       setLoading(true);
       setError('');
+      setSuccessMessage('');
       await login(email.trim(), password);
 
       // Persist or clear Remember Me identifier on successful authentication
@@ -113,15 +115,6 @@ export default function Login() {
       );
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fillCredentials = (identifier, pass) => {
-    setEmail(identifier);
-    setPassword(pass);
-    setError('');
-    if (rememberMe) {
-      persistRemembered(identifier, true);
     }
   };
 
@@ -169,9 +162,9 @@ export default function Login() {
           </div>
         </div>
 
-        {/* Heading: Welcome to KIMS Service Desk */}
+        {/* Heading: Welcome to KIMS Ticketing System */}
         <h2 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight text-center mb-6 relative z-10">
-          Welcome to KIMS Service Desk
+          Welcome to KIMS Ticketing System
         </h2>
 
         {/* Error Banner */}
@@ -179,6 +172,23 @@ export default function Login() {
           <div className="mb-4 p-3 rounded-2xl bg-rose-50/90 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2.5 animate-in fade-in duration-150 shadow-2xs relative z-10">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {/* Success Banner */}
+        {successMessage && (
+          <div className="mb-4 p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between gap-2.5 animate-in fade-in duration-150 shadow-2xs relative z-10">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span>{successMessage}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessMessage('')}
+              className="text-emerald-500 hover:text-emerald-700 p-0.5 cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
@@ -194,11 +204,10 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setEmail(savedEmail)}
-                  className={`flex-1 py-1 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer truncate ${
-                    email.toLowerCase() === savedEmail.toLowerCase()
+                  className={`flex-1 py-1 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer truncate ${email.toLowerCase() === savedEmail.toLowerCase()
                       ? 'bg-white shadow-2xs text-indigo-600 font-bold border border-indigo-200/70'
                       : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                    }`}
                   title={`Use saved Email: ${savedEmail}`}
                 >
                   <Mail className="w-3 h-3 shrink-0" />
@@ -209,11 +218,10 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setEmail(savedEmpId)}
-                  className={`py-1 px-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                    email.toUpperCase() === savedEmpId.toUpperCase()
+                  className={`py-1 px-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${email.toUpperCase() === savedEmpId.toUpperCase()
                       ? 'bg-white shadow-2xs text-sky-700 font-bold border border-sky-200/70'
                       : 'text-slate-500 hover:text-slate-800'
-                  }`}
+                    }`}
                   title={`Use saved Employee ID: ${savedEmpId}`}
                 >
                   <User className="w-3 h-3 shrink-0 text-sky-600" />
@@ -283,14 +291,12 @@ export default function Login() {
               className="flex items-center gap-2 cursor-pointer select-none group text-left"
             >
               <div
-                className={`w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 ${
-                  rememberMe ? 'bg-purple-600' : 'bg-slate-300'
-                }`}
+                className={`w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 ${rememberMe ? 'bg-purple-600' : 'bg-slate-300'
+                  }`}
               >
                 <div
-                  className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ${
-                    rememberMe ? 'translate-x-4' : 'translate-x-0'
-                  }`}
+                  className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ${rememberMe ? 'translate-x-4' : 'translate-x-0'
+                    }`}
                 />
               </div>
               <span className="text-xs font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
@@ -307,26 +313,8 @@ export default function Login() {
             </button>
           </div>
 
-          {/* Quick-fill test role section */}
-          <div className="pt-2">
-            <p className="text-[11px] font-semibold text-slate-500 mb-2 text-left">
-              Quick-fill test role
-            </p>
-            <div className="flex items-center gap-3">
-              {/* Admin Pill */}
-              <button
-                type="button"
-                onClick={() => fillCredentials('211210', 'Kims@123')}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#e0f2fe]/90 hover:bg-[#bae6fd] text-sky-900 text-xs font-semibold border border-sky-300/80 transition-all cursor-pointer active:scale-95 shadow-2xs"
-              >
-                <User className="w-3.5 h-3.5 text-sky-600" />
-                <span>Admin</span>
-              </button>
-            </div>
-          </div>
-
           {/* Access Portal CTA Button with Radiant Purple-Cyan Bloom */}
-          <div className="pt-2">
+          <div className="pt-3">
             <button
               type="submit"
               disabled={loading}
@@ -356,6 +344,8 @@ export default function Login() {
           onResetSuccess={(resetEmail) => {
             setEmail(resetEmail);
             setPassword('');
+            setError('');
+            setSuccessMessage('Password reset successfully! Please log in with your new password.');
           }}
         />
       )}

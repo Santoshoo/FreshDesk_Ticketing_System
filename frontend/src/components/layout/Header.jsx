@@ -87,7 +87,7 @@ export default function Header({ onToggleSidebar }) {
 
         {/* User Pill */}
         <div
-          onClick={() => navigate('/settings')}
+          onClick={() => navigate('/profile')}
           className="flex items-center gap-2.5 pl-2 pr-3.5 py-1 rounded-full cursor-pointer transition-all"
           style={{
             border: '1px solid #e8eaf0',
