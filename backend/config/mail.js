@@ -17,6 +17,9 @@ export function getTransporter() {
       tls: {
         rejectUnauthorized: false, // Prevents self-signed cert issues in hospital intranet/local setups
       },
+      connectionTimeout: 10000, // 10s connection timeout
+      greetingTimeout: 10000, // 10s greeting timeout
+      socketTimeout: 15000, // 15s socket timeout
     });
 
     logger.info({

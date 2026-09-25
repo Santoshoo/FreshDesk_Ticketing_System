@@ -26,6 +26,16 @@ export const authApi = {
     const res = await api.post('/auth/logout');
     return res.data;
   },
+
+  forgotPassword: async (identifier) => {
+    const res = await api.post('/auth/forgot-password', { identifier });
+    return res.data;
+  },
+
+  resetPassword: async ({ identifier, otp, newPassword }) => {
+    const res = await api.post('/auth/reset-password', { identifier, otp, newPassword });
+    return res.data;
+  },
 };
 
 export default authApi;

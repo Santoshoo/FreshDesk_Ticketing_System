@@ -64,6 +64,41 @@ export class AuthController {
       message: 'Logged out successfully',
     });
   }
+
+  async forgotPassword(req, res, next) {
+    try {
+      const { identifier, email, employeeId } = req.body;
+      const targetIdentifier = identifier || email || employeeId;
+      const result = await authService.requestPasswordReset(targetIdentifier);
+      res.json({
+        success: true,
+        message: result.message,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async resetPassword(req, res, next) {
+    try {
+      const { identifier, email, employeeId, otp, code, newPassword } = req.body;
+      const targetIdentifier = identifier || email || employeeId;
+      const targetOtp = otp || code;
+      const result = await authService.resetPasswordWithOtp({
+        identifier: targetIdentifier,
+        otp: targetOtp,
+        newPassword,
+      });
+      res.json({
+        success: true,
+        message: result.message,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new AuthController();

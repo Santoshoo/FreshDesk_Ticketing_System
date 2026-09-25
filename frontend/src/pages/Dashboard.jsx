@@ -238,7 +238,7 @@ export default function Dashboard() {
       numColor: 'text-slate-900',
     },
     {
-      key: 'resolvedRow1',
+      key: 'resolved',
       label: 'Resolved',
       value: resolvedCount,
       link: '/tickets?status=RESOLVED',
@@ -250,21 +250,6 @@ export default function Dashboard() {
         '0 14px 30px -4px rgba(79, 70, 229, 0.26), 0 6px 14px rgba(79, 70, 229, 0.14), inset 0 1.5px 1.5px rgba(255, 255, 255, 1)',
       orb: 'rgba(129, 140, 248, 0.16)',
       labelColor: 'text-indigo-950 font-bold',
-      numColor: 'text-slate-900',
-    },
-    {
-      key: 'resolvedRow2',
-      label: 'Resolved',
-      value: resolvedCount || onHoldCount || 0,
-      link: '/tickets?status=RESOLVED',
-      bg: 'linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(207, 250, 254, 0.72) 42%, rgba(165, 243, 252, 0.85) 100%)',
-      border: '1.5px solid rgba(45, 212, 191, 0.5)',
-      boxShadow:
-        '0 10px 24px -4px rgba(6, 182, 212, 0.16), 0 4px 10px rgba(6, 182, 212, 0.08), inset 0 1.5px 1.5px rgba(255, 255, 255, 0.95), inset 0 -1px 2px rgba(6, 182, 212, 0.08)',
-      hoverShadow:
-        '0 14px 30px -4px rgba(6, 182, 212, 0.26), 0 6px 14px rgba(6, 182, 212, 0.14), inset 0 1.5px 1.5px rgba(255, 255, 255, 1)',
-      orb: 'rgba(45, 212, 191, 0.16)',
-      labelColor: 'text-cyan-950 font-bold',
       numColor: 'text-slate-900',
     },
     {
@@ -283,22 +268,7 @@ export default function Dashboard() {
       numColor: 'text-slate-900',
     },
     {
-      key: 'totalLight',
-      label: 'Total',
-      value: activeQueueCount,
-      link: '/tickets',
-      bg: 'linear-gradient(145deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.8) 42%, rgba(241, 245, 249, 0.9) 100%)',
-      border: '1.5px solid rgba(203, 213, 225, 0.75)',
-      boxShadow:
-        '0 10px 24px -4px rgba(99, 102, 241, 0.14), 0 4px 10px rgba(100, 116, 139, 0.06), inset 0 1.5px 1.5px rgba(255, 255, 255, 1)',
-      hoverShadow:
-        '0 14px 30px -4px rgba(99, 102, 241, 0.22), 0 6px 14px rgba(100, 116, 139, 0.1), inset 0 1.5px 1.5px rgba(255, 255, 255, 1)',
-      orb: 'rgba(199, 210, 254, 0.16)',
-      labelColor: 'text-slate-800 font-bold',
-      numColor: 'text-slate-900',
-    },
-    {
-      key: 'totalDark',
+      key: 'total',
       label: 'Total',
       value: totalCount,
       link: '/tickets',
@@ -378,8 +348,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── 8 Stat Boxes with 3D Depth, Luminous Glow & Specular Glassmorphism ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
+      {/* ── 6 Stat Boxes with 3D Depth, Luminous Glow & Specular Glassmorphism ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
         {statCardConfigs.map((c) => (
           <div
             key={c.key}

@@ -40,6 +40,11 @@ export class TicketService {
       err.statusCode = 400;
       throw err;
     }
+    if (!agentId) {
+      const err = new Error('Assign To (Agent) is required');
+      err.statusCode = 400;
+      throw err;
+    }
     if (!description || description.trim() === '') {
       const err = new Error('Description is required');
       err.statusCode = 400;
@@ -108,13 +113,17 @@ export class TicketService {
     }
 
     // 4. Validate Selected Agent belongs to Group
-    if (cleanAgentId) {
-      const isAgentInGroup = await agentRepository.isUserInGroup(cleanAgentId, cleanGroupId);
-      if (!isAgentInGroup) {
-        const err = new Error('The selected agent does not belong to the chosen group');
-        err.statusCode = 400;
-        throw err;
-      }
+    if (!cleanAgentId) {
+      const err = new Error('Assign To (Agent) is required');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const isAgentInGroup = await agentRepository.isUserInGroup(cleanAgentId, cleanGroupId);
+    if (!isAgentInGroup) {
+      const err = new Error('The selected agent does not belong to the chosen group');
+      err.statusCode = 400;
+      throw err;
     }
 
     const allowedPriorities = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];

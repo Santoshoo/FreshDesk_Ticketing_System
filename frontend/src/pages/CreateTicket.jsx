@@ -225,6 +225,11 @@ export default function CreateTicket() {
       showToast('Please select a priority.', 'error');
       return;
     }
+    if (!agentId) {
+      setError('Please assign an Agent to this ticket.');
+      showToast('Please select an agent to assign.', 'error');
+      return;
+    }
 
     const finalStatus = status || 'OPEN';
 
@@ -481,18 +486,23 @@ export default function CreateTicket() {
             {/* Assign To */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                Assign To
+                Assign To <span className="text-rose-500">*</span>
               </label>
               <select
+                required
                 value={agentId}
                 onChange={(e) => setAgentId(e.target.value)}
-                disabled={!groupId}
+                disabled={!groupId || availableAgents.length === 0}
                 className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
                   !agentId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
-                } ${!groupId ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
+                } ${!groupId || availableAgents.length === 0 ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
               >
-                <option value="">
-                  {!groupId ? 'Select Group first' : 'Select Agent (Optional / Unassigned)'}
+                <option value="" disabled>
+                  {!groupId
+                    ? 'Select Group first'
+                    : availableAgents.length === 0
+                    ? 'No active agents in this group'
+                    : 'Select Agent'}
                 </option>
                 {availableAgents.map((ag) => (
                   <option key={ag.id} value={ag.id} className="text-slate-800 font-normal">
@@ -500,6 +510,11 @@ export default function CreateTicket() {
                   </option>
                 ))}
               </select>
+              {groupId && availableAgents.length === 0 && (
+                <p className="text-[11px] text-rose-500 mt-1 font-medium">
+                  ⚠️ No active agents are assigned to this group. Please assign agents in Agent Groups.
+                </p>
+              )}
             </div>
 
             {/* Status */}

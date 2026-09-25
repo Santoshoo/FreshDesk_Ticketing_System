@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import kimsLogo from '../assets/kims-logo.png';
+import ResetPasswordModal from '../components/modals/ResetPasswordModal.jsx';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ export default function Login() {
   const [savedEmpId, setSavedEmpId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -296,12 +298,13 @@ export default function Login() {
               </span>
             </button>
 
-            <Link
-              to="/forgot-password"
-              className="font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors text-xs"
+            <button
+              type="button"
+              onClick={() => setShowResetModal(true)}
+              className="font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-colors text-xs cursor-pointer"
             >
               Forgot Password?
-            </Link>
+            </button>
           </div>
 
           {/* Quick-fill test role section */}
@@ -343,6 +346,19 @@ export default function Login() {
           </div>
         </form>
       </div>
+
+      {/* Reset Password Modal */}
+      {showResetModal && (
+        <ResetPasswordModal
+          isOpen={showResetModal}
+          initialIdentifier={email}
+          onClose={() => setShowResetModal(false)}
+          onResetSuccess={(resetEmail) => {
+            setEmail(resetEmail);
+            setPassword('');
+          }}
+        />
+      )}
     </div>
   );
 }
