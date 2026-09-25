@@ -12,5 +12,6 @@ router.get('/trend', dashboardController.getTrend.bind(dashboardController));
 router.get('/reports/category-wise', dashboardController.getCategoryReport.bind(dashboardController));
 router.get('/reports/group-wise', dashboardController.getGroupReport.bind(dashboardController));
 router.get('/reports/agent-wise', dashboardController.getAgentReport.bind(dashboardController));
+router.get('/reports/export', dashboardController.getReportExport.bind(dashboardController));
 
 export default router;

@@ -314,6 +314,91 @@ export class DashboardRepository {
 
     return result.sort((a, b) => b.total - a.total);
   }
+
+  async getReportExportData(where = {}, startDate = null, endDate = null) {
+    const dateFilter = {};
+    if (startDate && endDate) {
+      dateFilter.createdAt = {
+        gte: startDate,
+        lte: endDate,
+      };
+    } else if (startDate) {
+      dateFilter.createdAt = { gte: startDate };
+    } else if (endDate) {
+      dateFilter.createdAt = { lte: endDate };
+    }
+
+    const queryWhere = {
+      ...where,
+      ...dateFilter,
+    };
+
+    const [tickets, statusSummary, categoryReport, groupReport, agentReport] = await Promise.all([
+      prisma.ticket.findMany({
+        where: queryWhere,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          ticketNumber: true,
+          subject: true,
+          status: true,
+          priority: true,
+          contactSource: true,
+          contactName: true,
+          contactEmail: true,
+          description: true,
+          createdAt: true,
+          updatedAt: true,
+          resolvedAt: true,
+          closedAt: true,
+          contact: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              employeeId: true,
+              department: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+          employeeEmail: {
+            select: {
+              id: true,
+              email: true,
+              department: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+          group: {
+            select: { id: true, name: true },
+          },
+          ticketType: {
+            select: { id: true, name: true },
+          },
+          agent: {
+            select: { id: true, name: true, email: true, employeeId: true },
+          },
+          creator: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      }),
+      this.getStatusSummary(queryWhere),
+      this.getCategoryReport(queryWhere),
+      this.getGroupReport(queryWhere),
+      this.getAgentReport(queryWhere),
+    ]);
+
+    return {
+      tickets,
+      summary: statusSummary,
+      categoryReport,
+      groupReport,
+      agentReport,
+    };
+  }
 }
 
 export default new DashboardRepository();

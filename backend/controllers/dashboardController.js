@@ -60,6 +60,24 @@ export class DashboardController {
       next(error);
     }
   }
+
+  async getReportExport(req, res, next) {
+    try {
+      const { periodType, date, year, month, startDate, endDate, scope } = req.query;
+      const data = await dashboardService.getReportExport(req.user, {
+        periodType,
+        date,
+        year,
+        month,
+        startDate,
+        endDate,
+        scope,
+      });
+      res.json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default new DashboardController();

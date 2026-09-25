@@ -15,8 +15,10 @@ import {
   Layers,
   UserCheck,
   Percent,
+  Download,
 } from 'lucide-react';
 import dashboardApi from '../services/dashboardApi.js';
+import ReportDownloadModal from '../components/modals/ReportDownloadModal.jsx';
 
 export default function Reports() {
   const [activeTab, setActiveTab] = useState('trends'); // 'trends' | 'category' | 'group' | 'agent'
@@ -30,6 +32,7 @@ export default function Reports() {
   const [searchCategory, setSearchCategory] = useState('');
   const [searchGroup, setSearchGroup] = useState('');
   const [searchAgent, setSearchAgent] = useState('');
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
 
   const fetchReports = async () => {
     try {
@@ -144,6 +147,15 @@ export default function Reports() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowDownloadModal(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-xs shadow-indigo-600/20 transition-all cursor-pointer"
+            title="Download Reports (Month-wise, Week-wise, Day-wise)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download Report</span>
+          </button>
+
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-700 shadow-2xs">
             <Calendar className="w-3.5 h-3.5 text-indigo-500" />
             <span>All-Time Real-Time Data</span>
@@ -902,6 +914,14 @@ export default function Reports() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Report Download Modal */}
+      {showDownloadModal && (
+        <ReportDownloadModal
+          isOpen={showDownloadModal}
+          onClose={() => setShowDownloadModal(false)}
+        />
       )}
     </div>
   );

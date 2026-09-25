@@ -30,6 +30,11 @@ export const dashboardApi = {
     const res = await api.get('/dashboard/reports/agent-wise', { params: { scope } });
     return res.data;
   },
+
+  getReportExport: async (params = {}) => {
+    const res = await api.get('/dashboard/reports/export', { params });
+    return res.data;
+  },
 };
 
 export default dashboardApi;
