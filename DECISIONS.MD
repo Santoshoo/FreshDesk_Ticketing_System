@@ -65,6 +65,44 @@ Selected **MySQL 8.0+** as the relational database and **Prisma ORM** as the dat
 - **Backend Architecture**: Implemented `POST /api/groups/bulk` and `POST /api/ticket-types/bulk` routes protected by `isSuperAdmin` middleware. Uses `upsertGroup` and `upsertTicketType` to process records atomically and skip or update duplicate entries without failing the batch transaction.
 - **Frontend Architecture**: Client-side parsing using the `xlsx` library with interactive drag-and-drop modal preview (`GroupExcelUploadModal` and `TicketTypeExcelUploadModal`). Includes automated template generation ("Download Sample Template") to prevent user header format mismatches.
 
+### Decision 3.8: Password Reset via 6-Digit Email OTP (`password_reset_tokens`)
+- **Requirement**: Allow hospital staff to securely reset forgotten passwords without administrative intervention.
+- **Architecture & Security**:
+  - **Dual Identifier Lookup**: Staff can initiate reset using either registered Email or Employee ID (case-insensitive).
+  - **Bcrypt Token Hashing**: Generates a 6-digit numeric OTP; only the `bcrypt.hash(otp, 10)` hash is persisted to `password_reset_tokens` with a strict 15-minute expiration (`expiresAt`).
+  - **Single Active Token Enforcement**: Any previous unexpired tokens for the user are immediately invalidated upon requesting a new code (`usedAt: NOW()`), preventing token race conditions.
+  - **Non-Blocking SMTP Resilience**: Configured Nodemailer with socket/connection timeouts (`connectionTimeout: 10000`, `socketTimeout: 15000`) so slow mail relays do not stall the user request.
+  - **UX & Notifications**: Implemented a 2-step glassmorphic modal with a 60-second resend cooldown timer, in-modal alerts, and high-z-index floating toasts.
+
+### Decision 3.9: Streamlining User Settings to View-Only Profile (`Profile.jsx`)
+- **Requirement**: Prevent unauthorized or out-of-sync credential/profile edits by staff, as employee identity and assignments are centrally governed by Hospital Master Data.
+- **Architecture**:
+  - Replaced the multi-tab "Settings" screen (which had password change, notification toggles, theme, and language) with a dedicated, view-only **Profile** page (`/profile`).
+  - Updated sidebar navigation and header user pill to link to `/profile` with the `User` icon.
+  - Retained `/settings` as an automatic redirect to `/profile` for seamless backward compatibility.
+  - Displays verified master attributes: Full Name, Email (Primary ID), Employee ID (KIMS Master), System Role, and Department (Org Unit) in locked, read-only fields.
+
+### Decision 3.10: High-Scale Bulk Ticket Migration Architecture (2,00,000 Freshdesk Records)
+- **Requirement**: Migrate 2,00,000 historical Freshdesk tickets into KIMS ICT Service Desk up to ticket **#230191**, preserving original ticket numbers, assignment history, status history, tags, and timestamps.
+- **Key Architectural Decisions**:
+  - **3.10.1: Ticket Number Column & Sequence Expansion (`VARCHAR(20)`)**:
+    - *Problem*: `tickets.ticket_number` was originally constrained to `VARCHAR(5)` (maximum `#99999`). Migrating `#230191` (6 digits) would cause fatal MySQL truncation errors.
+    - *Solution*: Expanded column size in `schema.prisma` to `VARCHAR(20)` and updated sequence generator to support 6+ digits. On final chunk, atomically advanced `ticket_sequences.current_number` to `230191` so subsequent live tickets start at `#230192`.
+  - **3.10.2: Chunked Batch Ingestion (1,000 Rows/Chunk, 500 Rows/Transaction)**:
+    - *Problem*: Sending 5,000+ rows per API call with multi-paragraph descriptions easily exceeds the 50MB request limit (`413 Payload Too Large`) and triggers gateway timeouts.
+    - *Solution*: Chunk size optimized to 1,000 rows per HTTP POST (~3–5MB), processed in the backend via two 500-row `prisma.$transaction` blocks using `tx.ticket.createMany({ skipDuplicates: true })`. Yields high throughput (~1.5s per chunk) with continuous UI progress bar feedback.
+  - **3.10.3: Reference Map Pre-Loading & Automated Entity Upsertion**:
+    - Pre-loads all existing Groups, Ticket Types, Tags, and Agents into memory `Map<string, number>` at the start of each chunk to eliminate N+1 database queries.
+    - Automatically creates missing Groups, Types, and Tags with status `ACTIVE`.
+    - Enforces safe fallbacks for missing mandatory foreign keys (Default Group: `"General Support"`, Default Type: `"Incident"`), and truncates incoming fields to database bounds (Subject: 255 chars, Group/Type: 100 chars, Tag: 50 chars).
+  - **3.10.4: Historical Data Fidelity & Notification Suppression**:
+    - Completely bypasses `notificationService` to ensure zero emails are dispatched during the 200,000-ticket import.
+    - Preserves historical timestamps (`createdAt`, `resolvedAt`, `closedAt`, `updatedAt`).
+    - Aligns `ticket_status_history.changed_at = ticket.created_at` so historical audit logs reflect accurate Freshdesk timeline dates rather than the migration timestamp.
+  - **3.10.5: Dual Migration Interface (Web Wizard + Node.js CLI Script)**:
+    - *Web UI*: 4-step wizard at `/admin/bulk-import` for Super Admin with drag-and-drop, preview table, live progress bar, and failed rows CSV export.
+    - *CLI Runner*: Standalone Node.js script (`backend/scripts/migrate_freshdesk.js`) that runs with `--max-old-space-size=4096`, streaming directly from Excel/CSV to MySQL to completely bypass browser memory constraints.
+
 ---
 
 ## 4. Library Selection Rationale
@@ -77,5 +115,7 @@ Selected **MySQL 8.0+** as the relational database and **Prisma ORM** as the dat
 | **jsonwebtoken** | Authentication | Standardized JWT access & refresh token rotation for stateless API auth. |
 | **pino & pino-http** | Logging | Extremely low overhead structured JSON logger, ideal for high-throughput production logs. |
 | **express-rate-limit** | Security | Protects authentication routes from brute-force login attempts. |
-| **nodemailer** | Email Dispatch | Standardized SMTP transporter integration with HTML template rendering. |
+| **nodemailer** | Email Dispatch | Standardized SMTP transporter integration with HTML template rendering and configurable socket timeouts. |
 | **zod** | Schema Validation | Strong TypeScript/JavaScript runtime validation for API payloads. |
+| **xlsx** | Spreadsheet Processing | Client-side & server-side parsing and generation of `.xlsx`, `.xls`, and `.csv` files for bulk operations. |
+
