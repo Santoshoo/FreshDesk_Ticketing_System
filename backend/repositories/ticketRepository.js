@@ -14,7 +14,7 @@ const TICKET_LIST_INCLUDE = {
   ticketType: { select: { id: true, name: true } },
   group: { select: { id: true, name: true } },
   agent: { select: { id: true, name: true, email: true, employeeId: true } },
-  creator: { select: { id: true, name: true, employeeId: true } },
+  creator: { select: { id: true, name: true, employeeId: true, role: { select: { name: true } } } },
 };
 
 export function normalizeTicketContact(ticket) {
@@ -78,43 +78,60 @@ export class TicketRepository {
 
   async findById(id) {
     const numericId = typeof id === 'string' && /^\d+$/.test(id) ? BigInt(id) : id;
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: numericId },
-      include: {
-        // Extend the shared list include with detail-only relations
-        ...TICKET_LIST_INCLUDE,
-        comments: {
-          orderBy: { createdAt: 'asc' },
-          include: {
-            user: {
-              select: { id: true, name: true, email: true, employeeId: true, role: true },
+    const [ticket, auditLogs] = await Promise.all([
+      prisma.ticket.findUnique({
+        where: { id: numericId },
+        include: {
+          // Extend the shared list include with detail-only relations
+          ...TICKET_LIST_INCLUDE,
+          comments: {
+            orderBy: { createdAt: 'asc' },
+            include: {
+              user: {
+                select: { id: true, name: true, email: true, employeeId: true, role: true },
+              },
+            },
+          },
+          statusHistories: {
+            orderBy: { changedAt: 'desc' },
+            include: {
+              user: {
+                select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
+              },
+            },
+          },
+          assignmentHistories: {
+            orderBy: { changedAt: 'desc' },
+            include: {
+              changer: {
+                select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
+              },
+              oldGroup: { select: { id: true, name: true } },
+              newGroup: { select: { id: true, name: true } },
+              oldAgent: { select: { id: true, name: true } },
+              newAgent: { select: { id: true, name: true } },
             },
           },
         },
-        statusHistories: {
-          orderBy: { changedAt: 'desc' },
-          include: {
-            user: {
-              select: { id: true, name: true, employeeId: true },
-            },
+      }),
+      prisma.auditLog.findMany({
+        where: {
+          entity: 'TICKET',
+          entityId: String(numericId),
+        },
+        include: {
+          user: {
+            select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
           },
         },
-        assignmentHistories: {
-          orderBy: { changedAt: 'desc' },
-          include: {
-            changer: {
-              select: { id: true, name: true, employeeId: true },
-            },
-            oldGroup: { select: { id: true, name: true } },
-            newGroup: { select: { id: true, name: true } },
-            oldAgent: { select: { id: true, name: true } },
-            newAgent: { select: { id: true, name: true } },
-          },
-        },
-      },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
-    return normalizeTicketContact(ticket);
+    if (!ticket) return null;
+    const normalized = normalizeTicketContact(ticket);
+    normalized.auditLogs = auditLogs || [];
+    return normalized;
   }
 
   async findByTicketNumber(ticketNumber) {

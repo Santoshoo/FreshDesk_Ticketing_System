@@ -381,7 +381,27 @@ export class DashboardRepository {
             select: { id: true, name: true, email: true, employeeId: true },
           },
           creator: {
-            select: { id: true, name: true, email: true },
+            select: { id: true, name: true, email: true, employeeId: true },
+          },
+          assignmentHistories: {
+            orderBy: { changedAt: 'desc' },
+            include: {
+              changer: {
+                select: { id: true, name: true, employeeId: true },
+              },
+              oldGroup: { select: { id: true, name: true } },
+              newGroup: { select: { id: true, name: true } },
+              oldAgent: { select: { id: true, name: true } },
+              newAgent: { select: { id: true, name: true } },
+            },
+          },
+          statusHistories: {
+            orderBy: { changedAt: 'desc' },
+            include: {
+              user: {
+                select: { id: true, name: true, employeeId: true },
+              },
+            },
           },
         },
       }),

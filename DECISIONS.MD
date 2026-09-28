@@ -103,6 +103,16 @@ Selected **MySQL 8.0+** as the relational database and **Prisma ORM** as the dat
     - *Web UI*: 4-step wizard at `/admin/bulk-import` for Super Admin with drag-and-drop, preview table, live progress bar, and failed rows CSV export.
     - *CLI Runner*: Standalone Node.js script (`backend/scripts/migrate_freshdesk.js`) that runs with `--max-old-space-size=4096`, streaming directly from Excel/CSV to MySQL to completely bypass browser memory constraints.
 
+### Decision 3.11: Unified Ticket Activity Timeline & Report Download Audit Reflection
+- **Requirement**: Full visibility into ticket lifecycle events (who created the ticket, who assigned or transferred it to whom, status transitions, priority modifications) both on the Ticket Details screen and in downloaded Excel/CSV performance reports.
+- **Backend Architecture**:
+  - `ticketService.updateTicket`: Injects audit records into `audit_logs` (`action = 'PRIORITY_CHANGED'`, `action = 'TYPE_CHANGED'`) preserving actor ID, old value, and new value.
+  - `ticketRepository.findById`: Aggregates `statusHistories`, `assignmentHistories`, and `auditLogs` with user employee IDs and roles for unified detail views.
+  - `dashboardRepository.getReportExportData`: Joins `creator`, `assignmentHistories`, and `statusHistories` on batch ticket export queries.
+- **Frontend Architecture**:
+  - `TicketDetails.jsx`: Dynamically aggregates and normalizes creation, transfer, status, priority, and internal note events into a unified chronological stream with color-coded dot badges, directional paths (`From ➔ To`), and exact date/time tooltips.
+  - `reportExporter.js`: Injects 4 new audit attribution columns (`Created By`, `Assigned / Transferred By`, `Transfer Details`, `Status Changed By`) into both Excel (.xlsx Multi-Sheet) and CSV (.csv) exports.
+
 ---
 
 ## 4. Library Selection Rationale

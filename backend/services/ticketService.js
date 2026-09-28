@@ -409,6 +409,34 @@ export class TicketService {
       }).catch((err) => logger.warn(`Failed to record assignment history: ${err.message}`));
     }
 
+    // Track priority change in auditLog if changed
+    if (updateData.priority && updateData.priority !== ticket.priority) {
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'PRIORITY_CHANGED',
+          entity: 'TICKET',
+          entityId: String(numericTicketId),
+          oldValue: ticket.priority,
+          newValue: updateData.priority,
+        },
+      }).catch((err) => logger.warn(`Failed to record priority audit log: ${err.message}`));
+    }
+
+    // Track ticket type change in auditLog if changed
+    if (updateData.ticketTypeId && updateData.ticketTypeId !== ticket.ticketTypeId) {
+      await prisma.auditLog.create({
+        data: {
+          userId: user.id,
+          action: 'TYPE_CHANGED',
+          entity: 'TICKET',
+          entityId: String(numericTicketId),
+          oldValue: ticket.ticketType?.name || String(ticket.ticketTypeId),
+          newValue: String(updateData.ticketTypeId),
+        },
+      }).catch((err) => logger.warn(`Failed to record ticket type audit log: ${err.message}`));
+    }
+
     // TRIGGER TICKET CLOSED NOTIFICATIONS (Requirements 3, 14, 21):
     // Only when status actually transitions to CLOSED from another status
     if (updateData.status === 'CLOSED' && previousStatus !== 'CLOSED') {

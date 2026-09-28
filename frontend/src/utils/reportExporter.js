@@ -48,33 +48,70 @@ export function exportReportData({
     'Requester Name',
     'Requester Email',
     'Department',
+    'Created By',
     'Category (Ticket Type)',
     'Support Group',
     'Assigned Agent',
+    'Assigned / Transferred By',
+    'Transfer Details',
     'Priority',
     'Status',
+    'Status Changed By',
     'Created At',
     'Resolved At',
     'Closed At',
     'Description',
   ];
 
-  const ticketRows = tickets.map((t) => [
-    `#${t.ticketNumber}`,
-    t.subject || '',
-    t.contact?.name || t.contactName || t.employeeEmail?.email || 'Staff User',
-    t.contact?.email || t.contactEmail || t.employeeEmail?.email || '',
-    t.contact?.department?.name || t.employeeEmail?.department?.name || 'General',
-    t.ticketType?.name || 'General',
-    t.group?.name || 'Unassigned',
-    t.agent?.name || 'Unassigned',
-    t.priority || 'MEDIUM',
-    t.status || 'OPEN',
-    t.createdAt ? new Date(t.createdAt).toLocaleString() : '',
-    t.resolvedAt ? new Date(t.resolvedAt).toLocaleString() : '-',
-    t.closedAt ? new Date(t.closedAt).toLocaleString() : '-',
-    stripHtml(t.description || ''),
-  ]);
+  const ticketRows = tickets.map((t) => {
+    const createdBy = t.creator?.name
+      ? `${t.creator.name}${t.creator.employeeId ? ` (${t.creator.employeeId})` : ''}`
+      : (t.contact?.name || t.contactName || 'Staff User');
+
+    const latestAssign = Array.isArray(t.assignmentHistories) && t.assignmentHistories.length > 0 ? t.assignmentHistories[0] : null;
+    const assignedBy = latestAssign?.changer?.name
+      ? `${latestAssign.changer.name}${latestAssign.changer.employeeId ? ` (${latestAssign.changer.employeeId})` : ''}`
+      : (t.agent?.name ? 'Initial Assignment' : 'Unassigned');
+
+    let transferDetails = 'Unassigned';
+    if (latestAssign) {
+      if (latestAssign.oldAgent?.name && latestAssign.newAgent?.name && latestAssign.oldAgent.name !== latestAssign.newAgent.name) {
+        transferDetails = `Transferred: ${latestAssign.oldAgent.name} ➔ ${latestAssign.newAgent.name}`;
+      } else if (latestAssign.newAgent?.name) {
+        transferDetails = `Assigned to ${latestAssign.newAgent.name}`;
+      } else if (latestAssign.newGroup?.name) {
+        transferDetails = `Assigned to ${latestAssign.newGroup.name}`;
+      }
+    } else if (t.agent?.name) {
+      transferDetails = `Assigned to ${t.agent.name}`;
+    }
+
+    const latestStatus = Array.isArray(t.statusHistories) && t.statusHistories.length > 0 ? t.statusHistories[0] : null;
+    const statusChangedBy = latestStatus?.user?.name
+      ? `${latestStatus.user.name}${latestStatus.user.employeeId ? ` (${latestStatus.user.employeeId})` : ''}`
+      : (t.creator?.name || 'System');
+
+    return [
+      `#${t.ticketNumber}`,
+      t.subject || '',
+      t.contact?.name || t.contactName || t.employeeEmail?.email || 'Staff User',
+      t.contact?.email || t.contactEmail || t.employeeEmail?.email || '',
+      t.contact?.department?.name || t.employeeEmail?.department?.name || 'General',
+      createdBy,
+      t.ticketType?.name || 'General',
+      t.group?.name || 'Unassigned',
+      t.agent?.name || 'Unassigned',
+      assignedBy,
+      transferDetails,
+      t.priority || 'MEDIUM',
+      t.status || 'OPEN',
+      statusChangedBy,
+      t.createdAt ? new Date(t.createdAt).toLocaleString() : '',
+      t.resolvedAt ? new Date(t.resolvedAt).toLocaleString() : '-',
+      t.closedAt ? new Date(t.closedAt).toLocaleString() : '-',
+      stripHtml(t.description || ''),
+    ];
+  });
 
   // CSV Export Option
   if (format === 'csv') {
@@ -184,14 +221,18 @@ export function exportReportData({
   wsTickets['!cols'] = [
     { wch: 15 }, // Ticket Number
     { wch: 35 }, // Subject
-    { wch: 22 }, // Requester
-    { wch: 28 }, // Email
+    { wch: 22 }, // Requester Name
+    { wch: 28 }, // Requester Email
     { wch: 20 }, // Department
+    { wch: 26 }, // Created By
     { wch: 22 }, // Category
-    { wch: 24 }, // Group
-    { wch: 20 }, // Agent
+    { wch: 24 }, // Support Group
+    { wch: 20 }, // Assigned Agent
+    { wch: 26 }, // Assigned / Transferred By
+    { wch: 32 }, // Transfer Details
     { wch: 12 }, // Priority
     { wch: 14 }, // Status
+    { wch: 26 }, // Status Changed By
     { wch: 22 }, // Created At
     { wch: 22 }, // Resolved At
     { wch: 22 }, // Closed At

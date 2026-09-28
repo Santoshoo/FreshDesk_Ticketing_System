@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -21,6 +21,7 @@ import {
   Italic,
   Underline,
   List,
+  Clock,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -208,6 +209,247 @@ function DescriptionEditor({ initialContent, onChange }) {
   );
 }
 
+const formatRelativeTime = (dateStr) => {
+  if (!dateStr) return '';
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHrs = Math.floor(diffMin / 60);
+  if (diffHrs < 24) return `${diffHrs} hour${diffHrs > 1 ? 's' : ''} ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const formatExactDateTime = (dateStr) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+
+const formatStatusName = (s) => {
+  if (!s) return 'Open';
+  return s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const buildActivityTimeline = (t) => {
+  if (!t) return [];
+  const events = [];
+
+  // 1. Ticket Creation Event
+  if (t.createdAt) {
+    const creatorName = t.creator?.name || t.contact?.name || t.contactName || 'Staff User';
+    const creatorEmpId = t.creator?.employeeId ? ` (${t.creator.employeeId})` : '';
+
+    events.push({
+      id: `created-${t.id}`,
+      type: 'CREATED',
+      timestamp: new Date(t.createdAt),
+      title: `Ticket created by ${creatorName}${creatorEmpId}`,
+      subtext: `Requester: ${t.contact?.name || t.contactName || 'Requester'}${t.group?.name ? ` · Support Group: ${t.group.name}` : ''}`,
+      badge: 'Created',
+      badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
+      dotClass: 'bg-blue-600',
+    });
+  }
+
+  // 2. Assignment & Transfer History
+  if (Array.isArray(t.assignmentHistories)) {
+    t.assignmentHistories.forEach((ah) => {
+      const changerName = ah.changer?.name || 'Staff User';
+      const changerEmp = ah.changer?.employeeId ? ` (${ah.changer.employeeId})` : '';
+      const oldAgentName = ah.oldAgent?.name;
+      const newAgentName = ah.newAgent?.name;
+      const oldGroupName = ah.oldGroup?.name;
+      const newGroupName = ah.newGroup?.name;
+
+      // Check if this was the initial assignment at creation time
+      const isInitialAssign = !oldAgentName && !oldGroupName && ah.newGroupId === t.groupId && Math.abs(new Date(ah.changedAt) - new Date(t.createdAt)) < 2000;
+
+      if (isInitialAssign) {
+        if (newAgentName) {
+          events.push({
+            id: `assign-${ah.id}`,
+            type: 'ASSIGNMENT',
+            timestamp: new Date(ah.changedAt),
+            title: `Assigned to ${newAgentName}`,
+            subtext: `Assigned by ${changerName}${changerEmp}`,
+            badge: 'Assigned',
+            badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+            dotClass: 'bg-indigo-600',
+          });
+        }
+        return;
+      }
+
+      // Case A: Transfer between agents
+      if (oldAgentName && newAgentName && oldAgentName !== newAgentName) {
+        events.push({
+          id: `assign-${ah.id}`,
+          type: 'TRANSFER',
+          timestamp: new Date(ah.changedAt),
+          title: `Transferred ticket to ${newAgentName}`,
+          subtext: `Transferred by ${changerName}${changerEmp}`,
+          transferPath: `From: ${oldAgentName} ➔ To: ${newAgentName}`,
+          badge: 'Transferred',
+          badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+          dotClass: 'bg-indigo-600',
+        });
+      } else if (!oldAgentName && newAgentName) {
+        // Case B: First time agent assigned
+        events.push({
+          id: `assign-${ah.id}`,
+          type: 'ASSIGNMENT',
+          timestamp: new Date(ah.changedAt),
+          title: `Assigned to ${newAgentName}`,
+          subtext: `Assigned by ${changerName}${changerEmp}`,
+          transferPath: `Assigned to: ${newAgentName}`,
+          badge: 'Assigned',
+          badgeClass: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+          dotClass: 'bg-indigo-600',
+        });
+      } else if (oldAgentName && !newAgentName) {
+        // Case C: Agent unassigned
+        events.push({
+          id: `assign-${ah.id}`,
+          type: 'UNASSIGNED',
+          timestamp: new Date(ah.changedAt),
+          title: `Unassigned ticket from ${oldAgentName}`,
+          subtext: `by ${changerName}${changerEmp}`,
+          badge: 'Unassigned',
+          badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+          dotClass: 'bg-slate-500',
+        });
+      }
+
+      // Case D: Group transferred
+      if (oldGroupName && newGroupName && oldGroupName !== newGroupName) {
+        events.push({
+          id: `assign-group-${ah.id}`,
+          type: 'GROUP_TRANSFER',
+          timestamp: new Date(ah.changedAt),
+          title: `Transferred group to ${newGroupName}`,
+          subtext: `Transferred by ${changerName}${changerEmp}`,
+          transferPath: `From: ${oldGroupName} ➔ To: ${newGroupName}`,
+          badge: 'Group Transfer',
+          badgeClass: 'bg-violet-50 text-violet-700 border-violet-200',
+          dotClass: 'bg-violet-600',
+        });
+      }
+    });
+  }
+
+  // 3. Status History
+  if (Array.isArray(t.statusHistories)) {
+    t.statusHistories.forEach((sh) => {
+      if (sh.oldStatus === sh.newStatus) return;
+
+      const userName = sh.user?.name || 'Staff User';
+      const userEmp = sh.user?.employeeId ? ` (${sh.user.employeeId})` : '';
+      const oldFmt = formatStatusName(sh.oldStatus);
+      const newFmt = formatStatusName(sh.newStatus);
+
+      let dotClass = 'bg-emerald-600';
+      let badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+      if (sh.newStatus === 'PENDING' || sh.newStatus === 'ON_HOLD') {
+        dotClass = 'bg-amber-600';
+        badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+      } else if (sh.newStatus === 'CLOSED') {
+        dotClass = 'bg-rose-600';
+        badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+      } else if (sh.newStatus === 'RESOLVED') {
+        dotClass = 'bg-emerald-600';
+        badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      } else if (sh.newStatus === 'IN_PROGRESS') {
+        dotClass = 'bg-blue-600';
+        badgeClass = 'bg-blue-50 text-blue-700 border-blue-200';
+      }
+
+      events.push({
+        id: `status-${sh.id}`,
+        type: 'STATUS',
+        timestamp: new Date(sh.changedAt),
+        title: `Status changed to ${newFmt}`,
+        subtext: `by ${userName}${userEmp}`,
+        transferPath: `${oldFmt} ➔ ${newFmt}`,
+        badge: newFmt,
+        badgeClass,
+        dotClass,
+      });
+    });
+  }
+
+  // 4. Priority & Type Audits
+  if (Array.isArray(t.auditLogs)) {
+    t.auditLogs.forEach((al) => {
+      const userName = al.user?.name || 'Staff User';
+      const userEmp = al.user?.employeeId ? ` (${al.user.employeeId})` : '';
+
+      if (al.action === 'PRIORITY_CHANGED') {
+        events.push({
+          id: `audit-${al.id}`,
+          type: 'PRIORITY',
+          timestamp: new Date(al.createdAt),
+          title: `Priority updated to ${al.newValue}`,
+          subtext: `by ${userName}${userEmp}`,
+          transferPath: `${al.oldValue || 'MEDIUM'} ➔ ${al.newValue}`,
+          badge: 'Priority',
+          badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
+          dotClass: 'bg-rose-500',
+        });
+      } else if (al.action === 'TYPE_CHANGED') {
+        events.push({
+          id: `audit-${al.id}`,
+          type: 'TYPE',
+          timestamp: new Date(al.createdAt),
+          title: `Ticket type changed`,
+          subtext: `by ${userName}${userEmp}`,
+          badge: 'Type',
+          badgeClass: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+          dotClass: 'bg-cyan-600',
+        });
+      }
+    });
+  }
+
+  // 5. Internal Notes
+  if (Array.isArray(t.comments)) {
+    t.comments.forEach((c) => {
+      if (c.commentType === 'INTERNAL_NOTE') {
+        const userName = c.user?.name || 'Staff User';
+        events.push({
+          id: `note-${c.id}`,
+          type: 'NOTE',
+          timestamp: new Date(c.createdAt),
+          title: `Internal Note added`,
+          subtext: `by ${userName}`,
+          badge: 'Internal Note',
+          badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+          dotClass: 'bg-amber-500',
+        });
+      }
+    });
+  }
+
+  events.sort((a, b) => b.timestamp - a.timestamp);
+  return events;
+};
+
 export default function TicketDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -225,6 +467,10 @@ export default function TicketDetails() {
   const [error, setError] = useState('');
 
   const [activeTab, setActiveTab] = useState('conversation'); // 'conversation' | 'history'
+  const [showAllActivities, setShowAllActivities] = useState(false);
+
+  const activities = useMemo(() => buildActivityTimeline(ticket), [ticket]);
+  const visibleActivities = showAllActivities ? activities : activities.slice(0, 5);
 
   // Comment & Composer State
   const [composerMode, setComposerMode] = useState('REPLY'); // 'REPLY' | 'INTERNAL_NOTE'
@@ -469,24 +715,7 @@ export default function TicketDetails() {
   const isHigh = priority === 'HIGH' || priority === 'URGENT';
   const isLow = priority === 'LOW';
 
-  const formatRelativeTime = (dateStr) => {
-    if (!dateStr) return '';
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffMs = now - date;
-    const diffMin = Math.floor(diffMs / 60000);
-    if (diffMin < 1) return 'Just now';
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHrs = Math.floor(diffMin / 60);
-    if (diffHrs < 24) return `${diffHrs} hour${diffHrs > 1 ? 's' : ''} ago`;
-    const diffDays = Math.floor(diffHrs / 24);
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
+
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-200">
@@ -876,79 +1105,82 @@ export default function TicketDetails() {
           </div>
 
           {/* Card 3: Activity Timeline */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-3">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
-              Activity Timeline
-            </h3>
-            <div className="space-y-3 text-xs relative before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
-              {/* Event 1: Created */}
-              <div className="flex items-start gap-3 relative">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1 shrink-0 ring-4 ring-white" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-slate-800 font-medium">Created by the ticket</p>
-                  <p className="text-[10px] text-slate-400">
-                    {formatRelativeTime(ticket.createdAt)}
-                  </p>
-                </div>
-              </div>
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-5 space-y-3.5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Activity Timeline</span>
+              </h3>
+              <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200/60">
+                {activities.length} {activities.length === 1 ? 'event' : 'events'}
+              </span>
+            </div>
 
-              {/* Event 2: Agent Assignment */}
-              {ticket.agent && (
-                <div className="flex items-start gap-3 relative">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1 shrink-0 ring-4 ring-white" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-slate-800 font-medium">
-                      Assigned {ticket.agent.name}
-                    </p>
-                    <p className="text-[10px] text-slate-400">
-                      {formatRelativeTime(ticket.updatedAt || ticket.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Status History Events */}
-              {ticket.statusHistories && ticket.statusHistories.length > 0 ? (
-                ticket.statusHistories.slice(0, 3).map((h) => (
-                  <div key={h.id} className="flex items-start gap-3 relative">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0 ring-4 ring-white" />
+            {activities.length === 0 ? (
+              <p className="text-xs text-slate-400 italic py-2">No activity recorded yet.</p>
+            ) : (
+              <div className="space-y-3.5 text-xs relative before:absolute before:left-1 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
+                {visibleActivities.map((act) => (
+                  <div key={act.id} className="flex items-start gap-3 relative group">
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full ${act.dotClass} mt-1 shrink-0 ring-4 ring-white shadow-2xs`}
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="text-slate-800 font-medium">
-                        Status changed the ticket
-                      </p>
-                      <p className="text-[10px] text-slate-400">
-                        {formatRelativeTime(h.changedAt)}
+                      <div className="flex items-start justify-between gap-1.5 flex-wrap">
+                        <p className="text-slate-900 font-semibold leading-tight text-xs">
+                          {act.title}
+                        </p>
+                      </div>
+
+                      {act.transferPath && (
+                        <div className="mt-1">
+                          <span className="text-[10px] font-mono text-indigo-700 font-semibold bg-indigo-50/80 px-1.5 py-0.5 rounded border border-indigo-200/60 inline-flex items-center gap-1">
+                            {act.transferPath}
+                          </span>
+                        </div>
+                      )}
+
+                      {act.subtext && (
+                        <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">
+                          {act.subtext}
+                        </p>
+                      )}
+
+                      <p
+                        className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium"
+                        title={formatExactDateTime(act.timestamp)}
+                      >
+                        <Clock className="w-2.5 h-2.5 text-slate-400 shrink-0" />
+                        <span>{formatRelativeTime(act.timestamp)}</span>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-slate-400 font-normal">
+                          {formatExactDateTime(act.timestamp)}
+                        </span>
                       </p>
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="flex items-start gap-3 relative">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0 ring-4 ring-white" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-slate-800 font-medium">
-                      Status changed the ticket
-                    </p>
-                    <p className="text-[10px] text-slate-400">
-                      {formatRelativeTime(ticket.updatedAt || ticket.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Priority updated */}
-              <div className="flex items-start gap-3 relative">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0 ring-4 ring-white" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-slate-800 font-medium">
-                    Priority updated the ticket
-                  </p>
-                  <p className="text-[10px] text-slate-400">
-                    {formatRelativeTime(ticket.updatedAt || ticket.createdAt)}
-                  </p>
-                </div>
+                ))}
               </div>
-            </div>
+            )}
+
+            {activities.length > 5 && (
+              <button
+                type="button"
+                onClick={() => setShowAllActivities(!showAllActivities)}
+                className="w-full pt-2.5 text-center text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors flex items-center justify-center gap-1 cursor-pointer border-t border-slate-100"
+              >
+                <span>
+                  {showAllActivities
+                    ? 'Show fewer activities'
+                    : `View all ${activities.length} activities`}
+                </span>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-150 ${
+                    showAllActivities ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+            )}
           </div>
         </div>
       </div>
