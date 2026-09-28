@@ -11,9 +11,13 @@ async function startServer() {
     await prisma.$connect();
     logger.info('Connected to MySQL database via Prisma successfully.');
 
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       logger.info(`KIMS ICT Service Desk backend server running on http://0.0.0.0:${PORT} [${config.nodeEnv}]`);
     });
+
+    // Prevent proxy ECONNRESET by ensuring server keepAlive is longer than reverse proxy timeout
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
   } catch (error) {
     logger.error('Failed to start backend server:', error);
     process.exit(1);
