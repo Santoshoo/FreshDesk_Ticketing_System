@@ -357,23 +357,21 @@ Interface Option B: Standalone Node.js CLI (backend/scripts/migrate_freshdesk.js
    │
 3. frontend/src/pages/TicketDetails.jsx :: buildActivityTimeline(ticket)
    ├── Normalizes events: Creation, Transfers (From ➔ To), Status changes, Priority changes, Internal notes
-   ├── Sorts chronologically (newest on top)
+   ├── Sorts chronologically (creation at top as it started, followed by assignments & next phases)
    └── Renders color-coded timeline with actor attribution and exact date/time hover tooltips
 
 ─────────────────────────────────────────────────────────────────────────────
 
-[Phase 3: Audit Attribution in Report Downloads]
+[Phase 3: Clean Operational Report Downloads (16 Columns)]
 1. Admin clicks "Download Report" on /reports -> selects period & format (Excel/CSV)
    │
 2. repositories/dashboardRepository.js :: getReportExportData()
-   └── Injects creator, latest assignmentHistories, and latest statusHistories
+   └── Retrieves operational fields, timestamps, and history for accurate Last Update DateTime
    │
 3. frontend/src/utils/reportExporter.js :: exportReportData()
-   ├── Injects 4 new columns into Excel Sheet 2 & CSV:
-   │   ├── Created By (e.g. Amlan Nanda (211210))
-   │   ├── Assigned / Transferred By (e.g. BikkuKumar (202885))
-   │   ├── Transfer Details (e.g. Transferred: Unassigned ➔ Amlan Nanda)
-   │   └── Status Changed By (e.g. BikkuKumar (202885))
+   ├── Formats clean 16-column export (Ticket No through TAT)
+   ├── Excludes all activity/transfer log columns (retained exclusively in frontend UI)
+   ├── Applies Excel styling (Bold Black 18pt centered header, 12pt centered data)
    └── Auto-downloads formatted file to browser
 ```
 
@@ -394,9 +392,9 @@ Interface Option B: Standalone Node.js CLI (backend/scripts/migrate_freshdesk.js
 | [`backend/repositories/bulkImportRepository.js`](file:///m:/FreshDesk_Ticketing_System/backend/repositories/bulkImportRepository.js) | High-throughput batch ticket DAL | `createTicketsBatch`, `createStatusHistoriesBatch`, `advanceSequenceToMax` |
 | [`backend/controllers/bulkImportController.js`](file:///m:/FreshDesk_Ticketing_System/backend/controllers/bulkImportController.js) | Bulk migration HTTP endpoints | `importFreshdeskChunk`, `resetTicketDatabaseForMigration` |
 | [`backend/scripts/migrate_freshdesk.js`](file:///m:/FreshDesk_Ticketing_System/backend/scripts/migrate_freshdesk.js) | High-scale CLI migration runner (4GB heap) | Direct XLSX/CSV streaming to API, progress bar, error log generation |
-| [`backend/repositories/dashboardRepository.js`](file:///m:/FreshDesk_Ticketing_System/backend/repositories/dashboardRepository.js) | Dashboard metrics & DB aggregation | `getStatusSummary`, `getRecentTickets`, `getTrend`, `getReportExportData` (audit-enriched) |
+| [`backend/repositories/dashboardRepository.js`](file:///m:/FreshDesk_Ticketing_System/backend/repositories/dashboardRepository.js) | Dashboard metrics & DB aggregation | `getStatusSummary`, `getRecentTickets`, `getTrend`, `getReportExportData` |
 | [`backend/services/notificationService.js`](file:///m:/FreshDesk_Ticketing_System/backend/services/notificationService.js) | Async email notification dispatcher | `sendTicketCreatedNotifications`, `sendTicketClosedNotifications`, `sendPasswordResetOtpEmail` |
 | [`frontend/src/pages/TicketDetails.jsx`](file:///m:/FreshDesk_Ticketing_System/frontend/src/pages/TicketDetails.jsx) | Ticket detail view & unified activity timeline | `buildActivityTimeline`, timeline rendering with actor & transfer attribution |
-| [`frontend/src/utils/reportExporter.js`](file:///m:/FreshDesk_Ticketing_System/frontend/src/utils/reportExporter.js) | Multi-format report exporter | `exportReportData` (Excel Multi-Sheet & CSV with audit attribution columns) |
+| [`frontend/src/utils/reportExporter.js`](file:///m:/FreshDesk_Ticketing_System/frontend/src/utils/reportExporter.js) | Multi-format report exporter | `exportReportData` (Clean 16-Column Excel & CSV with custom styling, Last Update & TAT) |
 | [`frontend/src/pages/BulkTicketImport.jsx`](file:///m:/FreshDesk_Ticketing_System/frontend/src/pages/BulkTicketImport.jsx) | Super Admin 4-step bulk migration UI | File dropzone, 17-column validator, chunking dispatcher, error CSV exporter |
 | [`frontend/src/pages/Profile.jsx`](file:///m:/FreshDesk_Ticketing_System/frontend/src/pages/Profile.jsx) | Read-only hospital staff profile view | Displays locked Master attributes (Employee ID, Org Unit, Role) |

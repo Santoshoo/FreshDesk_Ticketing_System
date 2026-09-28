@@ -446,7 +446,16 @@ const buildActivityTimeline = (t) => {
     });
   }
 
-  events.sort((a, b) => b.timestamp - a.timestamp);
+  // Sort ascending: Ticket Created at the top as it started, followed by assigned and next phases
+  events.sort((a, b) => {
+    const diff = a.timestamp - b.timestamp;
+    if (diff !== 0) return diff;
+    if (a.type === 'CREATED') return -1;
+    if (b.type === 'CREATED') return 1;
+    if (a.type === 'ASSIGNMENT' && b.type !== 'CREATED') return -1;
+    if (b.type === 'ASSIGNMENT' && a.type !== 'CREATED') return 1;
+    return 0;
+  });
   return events;
 };
 

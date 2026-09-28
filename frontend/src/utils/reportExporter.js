@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 /**
  * Utility to strip HTML tags for clean spreadsheet output
@@ -20,8 +20,95 @@ function stripHtml(html) {
 }
 
 /**
- * Exports report data to Excel (.xlsx) with multi-sheet formatting
- * or to CSV (.csv) for raw ticket data.
+ * Formats a Date or timestamp string strictly into "dd-mm-yyyy hh:mm:ss" (24-hour time)
+ */
+function formatDateTime(dateInput) {
+  if (!dateInput) return '';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Resolves the actual latest update timestamp of the ticket.
+ * - If never updated after creation (timestamps within 1000ms), returns formatDateTime(createdAt).
+ * - If updated later (status changes, assignment transfers, or content edits), returns the newest update timestamp.
+ */
+function getLastUpdateDateTime(t) {
+  if (!t) return '';
+  const createdTs = t.createdAt ? new Date(t.createdAt).getTime() : NaN;
+  const candidateTimestamps = [];
+
+  if (t.updatedAt) {
+    const ts = new Date(t.updatedAt).getTime();
+    if (!isNaN(ts)) candidateTimestamps.push(ts);
+  }
+  if (Array.isArray(t.statusHistories)) {
+    for (const sh of t.statusHistories) {
+      if (sh?.changedAt) {
+        const ts = new Date(sh.changedAt).getTime();
+        if (!isNaN(ts)) candidateTimestamps.push(ts);
+      }
+    }
+  }
+  if (Array.isArray(t.assignmentHistories)) {
+    for (const ah of t.assignmentHistories) {
+      if (ah?.changedAt) {
+        const ts = new Date(ah.changedAt).getTime();
+        if (!isNaN(ts)) candidateTimestamps.push(ts);
+      }
+    }
+  }
+  if (t.resolvedAt) {
+    const ts = new Date(t.resolvedAt).getTime();
+    if (!isNaN(ts)) candidateTimestamps.push(ts);
+  }
+  if (t.closedAt) {
+    const ts = new Date(t.closedAt).getTime();
+    if (!isNaN(ts)) candidateTimestamps.push(ts);
+  }
+
+  if (candidateTimestamps.length === 0) {
+    return t.createdAt ? formatDateTime(t.createdAt) : '';
+  }
+
+  const maxTs = Math.max(...candidateTimestamps);
+  if (!isNaN(createdTs) && maxTs - createdTs <= 1000) {
+    return formatDateTime(t.createdAt);
+  }
+  return formatDateTime(new Date(maxTs));
+}
+
+/**
+ * Calculates Turn Around Time (TAT) strictly when Closed DateTime exists.
+ * Formula: Closed DateTime - Ticket Created DateTime
+ * Formatted as [hh]:mm:ss without 24-hour wrap-around (e.g. 30:00:00).
+ * Empty string for non-closed tickets.
+ */
+function calculateTAT(createdAt, closedAt) {
+  if (!closedAt || !createdAt) return '';
+  const createdDate = new Date(createdAt);
+  const closedDate = new Date(closedAt);
+  const diffMs = closedDate.getTime() - createdDate.getTime();
+  if (isNaN(diffMs) || diffMs < 0) return '';
+
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+/**
+ * Exports report data to Excel (.xlsx) with styled 16-column format
+ * or to CSV (.csv) with the exact same columns and values.
  */
 export function exportReportData({
   data,
@@ -41,75 +128,80 @@ export function exportReportData({
   const completed = (summary.resolved || 0) + (summary.closed || 0);
   const resolutionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // 1. Prepare Detailed Tickets Log
+  // 1. Exact 16 Headers in Specified Order
   const ticketHeaders = [
-    'Ticket Number',
+    'Ticket No',
     'Subject',
+    'Description',
     'Requester Name',
     'Requester Email',
     'Department',
-    'Created By',
     'Category (Ticket Type)',
     'Support Group',
     'Assigned Agent',
-    'Assigned / Transferred By',
-    'Transfer Details',
     'Priority',
     'Status',
-    'Status Changed By',
-    'Created At',
-    'Resolved At',
-    'Closed At',
-    'Description',
+    'Ticket Created DateTime',
+    'Resolve DateTime',
+    'Closed DateTime',
+    'Last Update DateTime',
+    'TAT',
   ];
 
+  // 2. Map Ticket Data Rows
   const ticketRows = tickets.map((t) => {
-    const createdBy = t.creator?.name
-      ? `${t.creator.name}${t.creator.employeeId ? ` (${t.creator.employeeId})` : ''}`
-      : (t.contact?.name || t.contactName || 'Staff User');
+    const ticketNo = t.ticketNumber != null
+      ? (String(t.ticketNumber).startsWith('#') ? String(t.ticketNumber) : `#${t.ticketNumber}`)
+      : '';
 
-    const latestAssign = Array.isArray(t.assignmentHistories) && t.assignmentHistories.length > 0 ? t.assignmentHistories[0] : null;
-    const assignedBy = latestAssign?.changer?.name
-      ? `${latestAssign.changer.name}${latestAssign.changer.employeeId ? ` (${latestAssign.changer.employeeId})` : ''}`
-      : (t.agent?.name ? 'Initial Assignment' : 'Unassigned');
+    const subject = t.subject || '';
+    const description = stripHtml(t.description || '');
 
-    let transferDetails = 'Unassigned';
-    if (latestAssign) {
-      if (latestAssign.oldAgent?.name && latestAssign.newAgent?.name && latestAssign.oldAgent.name !== latestAssign.newAgent.name) {
-        transferDetails = `Transferred: ${latestAssign.oldAgent.name} ➔ ${latestAssign.newAgent.name}`;
-      } else if (latestAssign.newAgent?.name) {
-        transferDetails = `Assigned to ${latestAssign.newAgent.name}`;
-      } else if (latestAssign.newGroup?.name) {
-        transferDetails = `Assigned to ${latestAssign.newGroup.name}`;
-      }
-    } else if (t.agent?.name) {
-      transferDetails = `Assigned to ${t.agent.name}`;
-    }
+    const requesterName =
+      t.contact?.name ||
+      t.contactName ||
+      (t.employeeEmail?.email ? t.employeeEmail.email.split('@')[0] : 'Staff User');
 
-    const latestStatus = Array.isArray(t.statusHistories) && t.statusHistories.length > 0 ? t.statusHistories[0] : null;
-    const statusChangedBy = latestStatus?.user?.name
-      ? `${latestStatus.user.name}${latestStatus.user.employeeId ? ` (${latestStatus.user.employeeId})` : ''}`
-      : (t.creator?.name || 'System');
+    const requesterEmail =
+      t.contact?.email ||
+      t.contactEmail ||
+      t.employeeEmail?.email ||
+      '';
+
+    const department =
+      t.contact?.department?.name ||
+      t.employeeEmail?.department?.name ||
+      '';
+
+    const category = t.ticketType?.name || '';
+    const supportGroup = t.group?.name || 'Unassigned';
+    const assignedAgent = t.agent?.name || 'Unassigned';
+    const priority = t.priority || 'MEDIUM';
+    const status = t.status || 'OPEN';
+
+    const createdDateTime = formatDateTime(t.createdAt);
+    const resolveDateTime = t.resolvedAt ? formatDateTime(t.resolvedAt) : '';
+    const closedDateTime = t.closedAt ? formatDateTime(t.closedAt) : '';
+    const lastUpdateDateTime = getLastUpdateDateTime(t);
+    const tat = calculateTAT(t.createdAt, t.closedAt);
 
     return [
-      `#${t.ticketNumber}`,
-      t.subject || '',
-      t.contact?.name || t.contactName || t.employeeEmail?.email || 'Staff User',
-      t.contact?.email || t.contactEmail || t.employeeEmail?.email || '',
-      t.contact?.department?.name || t.employeeEmail?.department?.name || 'General',
-      createdBy,
-      t.ticketType?.name || 'General',
-      t.group?.name || 'Unassigned',
-      t.agent?.name || 'Unassigned',
-      assignedBy,
-      transferDetails,
-      t.priority || 'MEDIUM',
-      t.status || 'OPEN',
-      statusChangedBy,
-      t.createdAt ? new Date(t.createdAt).toLocaleString() : '',
-      t.resolvedAt ? new Date(t.resolvedAt).toLocaleString() : '-',
-      t.closedAt ? new Date(t.closedAt).toLocaleString() : '-',
-      stripHtml(t.description || ''),
+      ticketNo,
+      subject,
+      description,
+      requesterName,
+      requesterEmail,
+      department,
+      category,
+      supportGroup,
+      assignedAgent,
+      priority,
+      status,
+      createdDateTime,
+      resolveDateTime,
+      closedDateTime,
+      lastUpdateDateTime,
+      tat,
     ];
   });
 
@@ -135,7 +227,78 @@ export function exportReportData({
   // Excel (.xlsx) Multi-Sheet Export Option
   const wb = XLSX.utils.book_new();
 
-  // --- SHEET 1: EXECUTIVE SUMMARY & DISTRIBUTION ---
+  // --- SHEET 1: DETAILED TICKETS LOG (Primary active sheet) ---
+  const wsTickets = XLSX.utils.aoa_to_sheet([ticketHeaders, ...ticketRows]);
+
+  // Set Column Widths for Optimal Readability
+  wsTickets['!cols'] = [
+    { wch: 16 }, // Ticket No
+    { wch: 35 }, // Subject
+    { wch: 45 }, // Description
+    { wch: 24 }, // Requester Name
+    { wch: 30 }, // Requester Email
+    { wch: 22 }, // Department
+    { wch: 24 }, // Category (Ticket Type)
+    { wch: 24 }, // Support Group
+    { wch: 24 }, // Assigned Agent
+    { wch: 16 }, // Priority
+    { wch: 16 }, // Status
+    { wch: 26 }, // Ticket Created DateTime
+    { wch: 26 }, // Resolve DateTime
+    { wch: 26 }, // Closed DateTime
+    { wch: 26 }, // Last Update DateTime
+    { wch: 18 }, // TAT
+  ];
+
+  // Set Row Heights: Header 38pt, Data rows 22pt
+  wsTickets['!rows'] = [
+    { hpt: 38 },
+    ...ticketRows.map(() => ({ hpt: 22 })),
+  ];
+
+  // Header Style: BLACK, BOLD, Size 18, Horizontally & Vertically CENTER aligned
+  const headerStyle = {
+    font: {
+      name: 'Calibri',
+      sz: 18,
+      bold: true,
+      color: { rgb: '000000' },
+    },
+    alignment: {
+      horizontal: 'center',
+      vertical: 'center',
+      wrapText: true,
+    },
+  };
+
+  // Data Cell Style: Size 12, Horizontally & Vertically CENTER aligned
+  const dataStyle = {
+    font: {
+      name: 'Calibri',
+      sz: 12,
+    },
+    alignment: {
+      horizontal: 'center',
+      vertical: 'center',
+      wrapText: true,
+    },
+  };
+
+  // Apply Styles to All Cells
+  const range = XLSX.utils.decode_range(wsTickets['!ref'] || 'A1:P1');
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!wsTickets[cellAddress]) {
+        wsTickets[cellAddress] = { t: 's', v: '' };
+      }
+      wsTickets[cellAddress].s = R === 0 ? headerStyle : dataStyle;
+    }
+  }
+
+  XLSX.utils.book_append_sheet(wb, wsTickets, 'Tickets_Data');
+
+  // --- SHEET 2: EXECUTIVE SUMMARY & DISTRIBUTION ---
   const activeCategories = categoryReport.filter((c) => c.total > 0);
   const activeGroups = groupReport.filter((g) => g.total > 0);
   const activeAgents = agentReport.filter((a) => a.total > 0);
@@ -215,30 +378,6 @@ export function exportReportData({
     { wch: 20 },
   ];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Executive_Summary');
-
-  // --- SHEET 2: DETAILED TICKETS LOG ---
-  const wsTickets = XLSX.utils.aoa_to_sheet([ticketHeaders, ...ticketRows]);
-  wsTickets['!cols'] = [
-    { wch: 15 }, // Ticket Number
-    { wch: 35 }, // Subject
-    { wch: 22 }, // Requester Name
-    { wch: 28 }, // Requester Email
-    { wch: 20 }, // Department
-    { wch: 26 }, // Created By
-    { wch: 22 }, // Category
-    { wch: 24 }, // Support Group
-    { wch: 20 }, // Assigned Agent
-    { wch: 26 }, // Assigned / Transferred By
-    { wch: 32 }, // Transfer Details
-    { wch: 12 }, // Priority
-    { wch: 14 }, // Status
-    { wch: 26 }, // Status Changed By
-    { wch: 22 }, // Created At
-    { wch: 22 }, // Resolved At
-    { wch: 22 }, // Closed At
-    { wch: 45 }, // Description
-  ];
-  XLSX.utils.book_append_sheet(wb, wsTickets, 'Tickets_Data');
 
   // Trigger browser download
   XLSX.writeFile(wb, `${baseFilename}.xlsx`);
