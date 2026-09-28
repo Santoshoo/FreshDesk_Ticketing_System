@@ -35,8 +35,8 @@ Selected **MySQL 8.0+** as the relational database and **Prisma ORM** as the dat
 ## 3. High-Throughput & Scale Engineering Decisions (50,000 Users & 1,000,000+ Tickets)
 
 ### Decision 3.1: Ticket Number Formatting & Capacity Expansion (`ticketNumber.js`)
-- **Problem**: Originally, `ticketNumber` was defined as `VARCHAR(5)` with a hard cap at `99,999`. At 5,000 tickets/day, the system would crash on Day 20.
-- **Solution**: Expanded column size to `VARCHAR(20)` in DB migration `v1_scale_optimization`. Maintained minimum 5-digit zero-padding formatting (`#00001`, `#00002`...) using `String(num).padStart(5, '0')` while expanding capacity to **99,999,999+ tickets**.
+- **Problem**: Originally, `ticketNumber` was defined as `VARCHAR(5)` with a hard cap at `99,999`. At high ticket volumes, the sequence would overflow 5 digits.
+- **Solution**: Expanded column size to `VARCHAR(7)` in database. Standardized 7-digit zero-padding formatting (`#0000001`, `#0000002`...) using `String(num).padStart(7, '0')` expanding system capacity to **9,999,999 tickets**.
 - **Atomic Generation**: Used MySQL `UPDATE` + `SELECT FOR UPDATE` within a Prisma transaction to guarantee zero duplicate ticket numbers under concurrent requests.
 
 ### Decision 3.2: High-Performance Composite B-Tree Indexing

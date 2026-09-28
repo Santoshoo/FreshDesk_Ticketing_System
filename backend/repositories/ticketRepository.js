@@ -59,6 +59,38 @@ export function normalizeTicketContact(ticket) {
   };
 }
 
+const TICKET_DETAIL_INCLUDE = {
+  ...TICKET_LIST_INCLUDE,
+  comments: {
+    orderBy: { createdAt: 'asc' },
+    include: {
+      user: {
+        select: { id: true, name: true, email: true, employeeId: true, role: true },
+      },
+    },
+  },
+  statusHistories: {
+    orderBy: { changedAt: 'desc' },
+    include: {
+      user: {
+        select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
+      },
+    },
+  },
+  assignmentHistories: {
+    orderBy: { changedAt: 'desc' },
+    include: {
+      changer: {
+        select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
+      },
+      oldGroup: { select: { id: true, name: true } },
+      newGroup: { select: { id: true, name: true } },
+      oldAgent: { select: { id: true, name: true } },
+      newAgent: { select: { id: true, name: true } },
+    },
+  },
+};
+
 export class TicketRepository {
   async findMany({ skip = 0, take = 50, where = {} } = {}) {
     const tickets = await prisma.ticket.findMany({
@@ -77,58 +109,73 @@ export class TicketRepository {
   }
 
   async findById(id) {
-    const numericId = typeof id === 'string' && /^\d+$/.test(id) ? BigInt(id) : id;
-    const [ticket, auditLogs] = await Promise.all([
-      prisma.ticket.findUnique({
-        where: { id: numericId },
-        include: {
-          // Extend the shared list include with detail-only relations
-          ...TICKET_LIST_INCLUDE,
-          comments: {
-            orderBy: { createdAt: 'asc' },
-            include: {
-              user: {
-                select: { id: true, name: true, email: true, employeeId: true, role: true },
-              },
-            },
-          },
-          statusHistories: {
-            orderBy: { changedAt: 'desc' },
-            include: {
-              user: {
-                select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
-              },
-            },
-          },
-          assignmentHistories: {
-            orderBy: { changedAt: 'desc' },
-            include: {
-              changer: {
-                select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
-              },
-              oldGroup: { select: { id: true, name: true } },
-              newGroup: { select: { id: true, name: true } },
-              oldAgent: { select: { id: true, name: true } },
-              newAgent: { select: { id: true, name: true } },
-            },
-          },
-        },
-      }),
-      prisma.auditLog.findMany({
+    if (!id && id !== 0) return null;
+    const cleanId = String(id).replace(/^#/, '').trim();
+    let ticket = null;
+
+    // Check if the id has leading zeroes (e.g. '0000043') or originally started with '#'
+    const hasLeadingZero = /^0+\d+$/.test(cleanId);
+    const hasHash = String(id).trim().startsWith('#');
+
+    // If it clearly has ticket number formatting (leading zero or #), search by ticketNumber first
+    if (hasLeadingZero || hasHash) {
+      const padded7 = cleanId.padStart(7, '0');
+      const padded5 = cleanId.padStart(5, '0');
+      ticket = await prisma.ticket.findFirst({
         where: {
-          entity: 'TICKET',
-          entityId: String(numericId),
+          OR: [
+            { ticketNumber: cleanId },
+            { ticketNumber: padded7 },
+            { ticketNumber: padded5 },
+          ],
         },
-        include: {
-          user: {
-            select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
-          },
+        include: TICKET_DETAIL_INCLUDE,
+      });
+    }
+
+    // Otherwise, try finding by primary key ID if numeric
+    if (!ticket && /^\d+$/.test(cleanId)) {
+      try {
+        ticket = await prisma.ticket.findUnique({
+          where: { id: BigInt(cleanId) },
+          include: TICKET_DETAIL_INCLUDE,
+        });
+      } catch {
+        ticket = null;
+      }
+    }
+
+    // Fallback: try finding by ticketNumber (exact, 7-digit, 5-digit)
+    if (!ticket) {
+      const padded7 = cleanId.padStart(7, '0');
+      const padded5 = cleanId.padStart(5, '0');
+      ticket = await prisma.ticket.findFirst({
+        where: {
+          OR: [
+            { ticketNumber: cleanId },
+            { ticketNumber: padded7 },
+            { ticketNumber: padded5 },
+          ],
         },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ]);
+        include: TICKET_DETAIL_INCLUDE,
+      });
+    }
 
     if (!ticket) return null;
+
+    const auditLogs = await prisma.auditLog.findMany({
+      where: {
+        entity: 'TICKET',
+        entityId: String(ticket.id),
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, employeeId: true, role: { select: { name: true } } },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
     const normalized = normalizeTicketContact(ticket);
     normalized.auditLogs = auditLogs || [];
     return normalized;

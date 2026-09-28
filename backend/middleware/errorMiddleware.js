@@ -29,7 +29,7 @@ export function errorHandler(err, req, res, next) {
       success: false,
       error: {
         code: 'TICKET_NUMBER_CAPACITY_EXHAUSTED',
-        message: 'System ticket number limit (99999) has been reached.',
+        message: 'System ticket number limit (9999999) has been reached.',
       },
     });
   }

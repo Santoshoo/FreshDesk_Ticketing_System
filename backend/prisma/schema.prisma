@@ -148,7 +148,7 @@ model TicketSequence {
 
 model Ticket {
   id                  BigInt                    @id @default(autoincrement())
-  ticketNumber        String                    @unique @db.VarChar(5) @map("ticket_number")
+  ticketNumber        String                    @unique @db.VarChar(7) @map("ticket_number")
   contactId           Int?                      @map("contact_id")
   employeeEmailId     Int?                      @map("employee_email_id")
   contactSource       String                    @default("USER") @db.VarChar(30) @map("contact_source")

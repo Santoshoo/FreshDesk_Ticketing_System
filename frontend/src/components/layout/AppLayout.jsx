@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar.jsx';
 import Header from './Header.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function AppLayout() {
   const { user, loading } = useAuth();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
@@ -20,7 +21,7 @@ export default function AppLayout() {
   }
 
   if (!user && !loading) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return (

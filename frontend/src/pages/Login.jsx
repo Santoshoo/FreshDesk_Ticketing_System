@@ -1,9 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, User, CheckCircle2, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import kimsLogo from '../assets/kims-logo.png';
 import ResetPasswordModal from '../components/modals/ResetPasswordModal.jsx';
+
+const encodeStored = (str) => {
+  if (!str) return '';
+  try {
+    return btoa(unescape(encodeURIComponent(str)));
+  } catch {
+    return str;
+  }
+};
+
+const decodeStored = (str) => {
+  if (!str) return '';
+  try {
+    return decodeURIComponent(escape(atob(str)));
+  } catch {
+    return str;
+  }
+};
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,50 +37,64 @@ export default function Login() {
 
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Restore saved Email and/or Employee ID if user previously opted for "Remember Me"
+  // Restore saved Email, Employee ID, and Password if user previously opted for "Remember Me"
   useEffect(() => {
     try {
+      const isRemembered = localStorage.getItem('kims_remember_me') === 'true';
       const storedEmail = localStorage.getItem('kims_remember_email') || '';
       const storedEmpId = localStorage.getItem('kims_remember_empid') || '';
       const legacy = localStorage.getItem('kims_remember_identifier') || '';
       const lastChoice = localStorage.getItem('kims_last_login_choice') || '';
+      const storedPass = decodeStored(localStorage.getItem('kims_remember_password') || '');
 
       if (storedEmail) setSavedEmail(storedEmail);
       if (storedEmpId) setSavedEmpId(storedEmpId);
 
-      if (storedEmail || storedEmpId || legacy) {
+      if (isRemembered || storedEmail || storedEmpId || legacy) {
         setRememberMe(true);
+        let idToSet = '';
         if (lastChoice === 'empid' && storedEmpId) {
-          setEmail(storedEmpId);
+          idToSet = storedEmpId;
         } else if (storedEmail) {
-          setEmail(storedEmail);
+          idToSet = storedEmail;
         } else if (storedEmpId) {
-          setEmail(storedEmpId);
+          idToSet = storedEmpId;
         } else if (legacy) {
-          setEmail(legacy);
+          idToSet = legacy;
           if (legacy.includes('@')) {
             setSavedEmail(legacy);
           } else {
             setSavedEmpId(legacy);
           }
         }
+        if (idToSet) setEmail(idToSet);
+        if (storedPass) setPassword(storedPass);
       }
     } catch {
       // Ignore localStorage access errors if blocked
     }
   }, []);
 
-  const persistRemembered = (identifier, isEnabled) => {
+  const persistRemembered = (identifier, pass, isEnabled) => {
     try {
       if (!isEnabled) {
+        localStorage.removeItem('kims_remember_me');
         localStorage.removeItem('kims_remember_email');
         localStorage.removeItem('kims_remember_empid');
         localStorage.removeItem('kims_remember_identifier');
+        localStorage.removeItem('kims_remember_password');
         localStorage.removeItem('kims_last_login_choice');
         setSavedEmail('');
         setSavedEmpId('');
         return;
+      }
+
+      localStorage.setItem('kims_remember_me', 'true');
+
+      if (pass) {
+        localStorage.setItem('kims_remember_password', encodeStored(pass));
       }
 
       if (!identifier || !identifier.trim()) return;
@@ -87,7 +119,7 @@ export default function Login() {
   const handleToggleRemember = () => {
     const nextVal = !rememberMe;
     setRememberMe(nextVal);
-    persistRemembered(email, nextVal);
+    persistRemembered(email, password, nextVal);
   };
 
   const handleStandardLogin = async (e) => {
@@ -103,10 +135,13 @@ export default function Login() {
       setSuccessMessage('');
       await login(email.trim(), password);
 
-      // Persist or clear Remember Me identifier on successful authentication
-      persistRemembered(email, rememberMe);
+      // Persist or clear Remember Me identifier & password on successful authentication
+      persistRemembered(email, password, rememberMe);
 
-      navigate('/dashboard');
+      const from = location.state?.from?.pathname
+        ? `${location.state.from.pathname}${location.state.from.search || ''}`
+        : '/dashboard';
+      navigate(from, { replace: true });
     } catch (err) {
       setError(
         err.response?.data?.error?.message ||
@@ -203,7 +238,13 @@ export default function Login() {
               {savedEmail && (
                 <button
                   type="button"
-                  onClick={() => setEmail(savedEmail)}
+                  onClick={() => {
+                    setEmail(savedEmail);
+                    try {
+                      const sp = decodeStored(localStorage.getItem('kims_remember_password') || '');
+                      if (sp) setPassword(sp);
+                    } catch {}
+                  }}
                   className={`flex-1 py-1 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer truncate ${email.toLowerCase() === savedEmail.toLowerCase()
                       ? 'bg-white shadow-2xs text-indigo-600 font-bold border border-indigo-200/70'
                       : 'text-slate-500 hover:text-slate-800'
@@ -217,7 +258,13 @@ export default function Login() {
               {savedEmpId && (
                 <button
                   type="button"
-                  onClick={() => setEmail(savedEmpId)}
+                  onClick={() => {
+                    setEmail(savedEmpId);
+                    try {
+                      const sp = decodeStored(localStorage.getItem('kims_remember_password') || '');
+                      if (sp) setPassword(sp);
+                    } catch {}
+                  }}
                   className={`py-1 px-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${email.toUpperCase() === savedEmpId.toUpperCase()
                       ? 'bg-white shadow-2xs text-sky-700 font-bold border border-sky-200/70'
                       : 'text-slate-500 hover:text-slate-800'
@@ -300,7 +347,7 @@ export default function Login() {
                 />
               </div>
               <span className="text-xs font-medium text-slate-600 group-hover:text-slate-800 transition-colors">
-                Remember Me <span className="text-[10px] text-slate-400 font-normal">(Email / Employee ID)</span>
+                Remember Me
               </span>
             </button>
 
@@ -345,6 +392,9 @@ export default function Login() {
             setEmail(resetEmail);
             setPassword('');
             setError('');
+            try {
+              localStorage.removeItem('kims_remember_password');
+            } catch {}
             setSuccessMessage('Password reset successfully! Please log in with your new password.');
           }}
         />

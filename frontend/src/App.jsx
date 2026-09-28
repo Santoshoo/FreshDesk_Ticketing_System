@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { ToastProvider } from './context/ToastContext.jsx';
 import AppLayout from './components/layout/AppLayout.jsx';
@@ -23,6 +23,7 @@ import EmployeeEmailMaster from './pages/admin/EmployeeEmailMaster.jsx';
 
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
+  const location = useLocation();
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
@@ -30,7 +31,12 @@ function PublicRoute({ children }) {
       </div>
     );
   }
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user) {
+    const from = location.state?.from?.pathname
+      ? `${location.state.from.pathname}${location.state.from.search || ''}`
+      : '/dashboard';
+    return <Navigate to={from} replace />;
+  }
   return children;
 }
 

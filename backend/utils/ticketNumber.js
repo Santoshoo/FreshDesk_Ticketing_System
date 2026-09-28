@@ -1,9 +1,9 @@
 /**
- * Atomically generates the next sequential ticket number (e.g. "00001", "00002")
- * within an active Prisma transaction. Formats with at least 5 digits.
+ * Atomically generates the next sequential ticket number (e.g. "0000001", "0000043")
+ * within an active Prisma transaction. Formats with 7 digits.
  *
  * @param {import('@prisma/client').Prisma.TransactionClient} tx
- * @returns {Promise<string>} e.g. "00001", "00002"
+ * @returns {Promise<string>} e.g. "0000001", "0000043"
  */
 export async function generateNextTicketNumber(tx) {
   // 1. Atomically update and increment the sequence row
@@ -36,9 +36,9 @@ export async function generateNextTicketNumber(tx) {
       FOR UPDATE
     `;
     const num = Number(initResult[0].current_number);
-    return String(num).padStart(5, '0');
+    return String(num).padStart(7, '0');
   }
 
   const current = Number(result[0].current_number);
-  return String(current).padStart(5, '0');
+  return String(current).padStart(7, '0');
 }

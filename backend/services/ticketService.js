@@ -214,10 +214,12 @@ export class TicketService {
       const isTicketNumberFormat = /^\d+$/.test(cleanSearch);
 
       if (isTicketNumberFormat) {
-        const paddedTicketNum = cleanSearch.padStart(5, '0');
+        const padded7 = cleanSearch.padStart(7, '0');
+        const padded5 = cleanSearch.padStart(5, '0');
         where.OR = [
           { ticketNumber: cleanSearch },
-          { ticketNumber: paddedTicketNum },
+          { ticketNumber: padded7 },
+          { ticketNumber: padded5 },
           { ticketNumber: { contains: cleanSearch } },
         ];
       } else {
