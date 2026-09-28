@@ -71,10 +71,10 @@ export default function Reports() {
   const closedPct = Math.max(0, 100 - openPct - pendingPct - resolvedPct);
 
   const donutGradient = `conic-gradient(
-    #10b981 0deg ${openPct * 3.6}deg,
-    #f59e0b ${openPct * 3.6}deg ${(openPct + pendingPct) * 3.6}deg,
-    #6366f1 ${(openPct + pendingPct) * 3.6}deg ${(openPct + pendingPct + resolvedPct) * 3.6}deg,
-    #ef4444 ${(openPct + pendingPct + resolvedPct) * 3.6}deg 360deg
+    #3b82f6 0deg ${openPct * 3.6}deg,
+    #ef4444 ${openPct * 3.6}deg ${(openPct + pendingPct) * 3.6}deg,
+    #f97316 ${(openPct + pendingPct) * 3.6}deg ${(openPct + pendingPct + resolvedPct) * 3.6}deg,
+    #10b981 ${(openPct + pendingPct + resolvedPct) * 3.6}deg 360deg
   )`;
 
   // Category Tab Calculations
@@ -209,20 +209,20 @@ export default function Reports() {
               <p className="text-2xl font-extrabold text-slate-900 mt-1">{total}</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-              <p className="text-xs font-semibold text-emerald-600">Open</p>
-              <p className="text-2xl font-extrabold text-emerald-600 mt-1">{open}</p>
+              <p className="text-xs font-semibold text-blue-600">Open</p>
+              <p className="text-2xl font-extrabold text-blue-600 mt-1">{open}</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-              <p className="text-xs font-semibold text-amber-600">Pending</p>
-              <p className="text-2xl font-extrabold text-amber-600 mt-1">{pending}</p>
+              <p className="text-xs font-semibold text-rose-600">Pending</p>
+              <p className="text-2xl font-extrabold text-rose-600 mt-1">{pending}</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-              <p className="text-xs font-semibold text-indigo-600">Resolved</p>
-              <p className="text-2xl font-extrabold text-indigo-600 mt-1">{resolved}</p>
+              <p className="text-xs font-semibold text-orange-600">Resolved</p>
+              <p className="text-2xl font-extrabold text-orange-600 mt-1">{resolved}</p>
             </div>
             <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs">
-              <p className="text-xs font-semibold text-rose-600">Closed</p>
-              <p className="text-2xl font-extrabold text-rose-600 mt-1">{closed}</p>
+              <p className="text-xs font-semibold text-emerald-600">Closed</p>
+              <p className="text-2xl font-extrabold text-emerald-600 mt-1">{closed}</p>
             </div>
           </div>
 
@@ -305,19 +305,19 @@ export default function Reports() {
                 {/* Legend with percentages */}
                 <div className="space-y-2 text-xs font-medium">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                     <span className="text-slate-700">Open {open} ({openPct}%)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
                     <span className="text-slate-700">Pending {pending} ({pendingPct}%)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
                     <span className="text-slate-700">Resolved {resolved} ({resolvedPct}%)</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                     <span className="text-slate-700">Closed {closed} ({closedPct}%)</span>
                   </div>
                 </div>
@@ -506,27 +506,27 @@ export default function Reports() {
                           {cat.total}
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.open > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.open > 0 ? 'bg-blue-50 text-blue-700 border border-blue-200/60' : 'text-slate-400'}`}>
                             {cat.open}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.inProgress > 0 ? 'bg-sky-50 text-sky-700 border border-sky-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.inProgress > 0 ? 'bg-purple-50 text-purple-700 border border-purple-200/60' : 'text-slate-400'}`}>
                             {cat.inProgress}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.pending > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.pending > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200/60' : 'text-slate-400'}`}>
                             {cat.pending}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.resolved > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.resolved > 0 ? 'bg-orange-50 text-orange-700 border border-orange-200/60' : 'text-slate-400'}`}>
                             {cat.resolved}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.closed > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${cat.closed > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'text-slate-400'}`}>
                             {cat.closed}
                           </span>
                         </td>
@@ -658,27 +658,27 @@ export default function Reports() {
                           {grp.total}
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.open > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.open > 0 ? 'bg-blue-50 text-blue-700 border border-blue-200/60' : 'text-slate-400'}`}>
                             {grp.open}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.inProgress > 0 ? 'bg-sky-50 text-sky-700 border border-sky-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.inProgress > 0 ? 'bg-purple-50 text-purple-700 border border-purple-200/60' : 'text-slate-400'}`}>
                             {grp.inProgress}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.pending > 0 ? 'bg-amber-50 text-amber-700 border border-amber-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.pending > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200/60' : 'text-slate-400'}`}>
                             {grp.pending}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.resolved > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.resolved > 0 ? 'bg-orange-50 text-orange-700 border border-orange-200/60' : 'text-slate-400'}`}>
                             {grp.resolved}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-center">
-                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.closed > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200/60' : 'text-slate-400'}`}>
+                          <span className={`px-2 py-0.5 rounded-full font-semibold ${grp.closed > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'text-slate-400'}`}>
                             {grp.closed}
                           </span>
                         </td>
@@ -849,25 +849,25 @@ export default function Reports() {
                           </td>
 
                           <td className="py-3 px-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full font-semibold ${ag.open > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'text-slate-400'}`}>
+                            <span className={`px-2 py-0.5 rounded-full font-semibold ${ag.open > 0 ? 'bg-blue-50 text-blue-700 border border-blue-200/60' : 'text-slate-400'}`}>
                               {ag.open}
                             </span>
                           </td>
 
                           <td className="py-3 px-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full font-semibold ${ag.inProgress > 0 ? 'bg-sky-50 text-sky-700 border border-sky-200/60' : 'text-slate-400'}`}>
+                            <span className={`px-2 py-0.5 rounded-full font-semibold ${ag.inProgress > 0 ? 'bg-purple-50 text-purple-700 border border-purple-200/60' : 'text-slate-400'}`}>
                               {ag.inProgress}
                             </span>
                           </td>
 
                           <td className="py-3 px-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full font-semibold ${ag.resolved > 0 ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60' : 'text-slate-400'}`}>
+                            <span className={`px-2 py-0.5 rounded-full font-semibold ${ag.resolved > 0 ? 'bg-orange-50 text-orange-700 border border-orange-200/60' : 'text-slate-400'}`}>
                               {ag.resolved}
                             </span>
                           </td>
 
                           <td className="py-3 px-3 text-center">
-                            <span className={`px-2 py-0.5 rounded-full font-semibold ${ag.closed > 0 ? 'bg-rose-50 text-rose-700 border border-rose-200/60' : 'text-slate-400'}`}>
+                            <span className={`px-2 py-0.5 rounded-full font-semibold ${ag.closed > 0 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60' : 'text-slate-400'}`}>
                               {ag.closed}
                             </span>
                           </td>

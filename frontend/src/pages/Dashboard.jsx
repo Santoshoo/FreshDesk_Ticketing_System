@@ -186,15 +186,15 @@ export default function Dashboard() {
       label: 'Open',
       value: openCount,
       link: '/tickets?status=OPEN',
-      bg: 'linear-gradient(145deg, #dcfce7 0%, #bbf7d0 40%, #86efac 100%)',
+      bg: 'linear-gradient(145deg, #dbeafe 0%, #bfdbfe 40%, #93c5fd 100%)',
       border: '1.5px solid rgba(255, 255, 255, 0.8)',
       boxShadow:
-        '0 12px 30px -4px rgba(34, 197, 94, 0.25), 0 4px 10px rgba(34, 197, 94, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(22, 101, 52, 0.12)',
+        '0 12px 30px -4px rgba(59, 130, 246, 0.25), 0 4px 10px rgba(59, 130, 246, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(29, 78, 216, 0.12)',
       hoverShadow:
-        '0 18px 36px -4px rgba(34, 197, 94, 0.38), 0 8px 16px rgba(34, 197, 94, 0.18), inset 0 2px 2px rgba(255, 255, 255, 1)',
-      labelColor: 'text-emerald-950 font-bold',
+        '0 18px 36px -4px rgba(59, 130, 246, 0.38), 0 8px 16px rgba(59, 130, 246, 0.18), inset 0 2px 2px rgba(255, 255, 255, 1)',
+      labelColor: 'text-blue-950 font-bold',
       numColor: 'text-slate-900',
-      orb: 'rgba(34, 197, 94, 0.3)',
+      orb: 'rgba(59, 130, 246, 0.3)',
       isDark: false,
     },
     {
@@ -202,15 +202,15 @@ export default function Dashboard() {
       label: 'Pending',
       value: pendingCount + onHoldCount,
       link: '/tickets?status=PENDING',
-      bg: 'linear-gradient(145deg, #fef3c7 0%, #fde68a 40%, #fcd34d 100%)',
+      bg: 'linear-gradient(145deg, #ffe4e6 0%, #fecdd3 40%, #fda4af 100%)',
       border: '1.5px solid rgba(255, 255, 255, 0.8)',
       boxShadow:
-        '0 12px 30px -4px rgba(245, 158, 11, 0.25), 0 4px 10px rgba(245, 158, 11, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(180, 83, 9, 0.12)',
+        '0 12px 30px -4px rgba(239, 68, 68, 0.25), 0 4px 10px rgba(239, 68, 68, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(185, 28, 28, 0.12)',
       hoverShadow:
-        '0 18px 36px -4px rgba(245, 158, 11, 0.38), 0 8px 16px rgba(245, 158, 11, 0.18), inset 0 2px 2px rgba(255, 255, 255, 1)',
-      labelColor: 'text-amber-950 font-bold',
+        '0 18px 36px -4px rgba(239, 68, 68, 0.38), 0 8px 16px rgba(239, 68, 68, 0.18), inset 0 2px 2px rgba(255, 255, 255, 1)',
+      labelColor: 'text-rose-950 font-bold',
       numColor: 'text-slate-900',
-      orb: 'rgba(245, 158, 11, 0.3)',
+      orb: 'rgba(239, 68, 68, 0.3)',
       isDark: false,
     },
     {
@@ -234,15 +234,15 @@ export default function Dashboard() {
       label: 'Resolved',
       value: resolvedCount,
       link: '/tickets?status=RESOLVED',
-      bg: 'linear-gradient(145deg, #e0e7ff 0%, #c7d2fe 40%, #a5b4fc 100%)',
+      bg: 'linear-gradient(145deg, #ffedd5 0%, #fed7aa 40%, #fdba74 100%)',
       border: '1.5px solid rgba(255, 255, 255, 0.8)',
       boxShadow:
-        '0 12px 30px -4px rgba(99, 102, 241, 0.25), 0 4px 10px rgba(99, 102, 241, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(49, 46, 129, 0.12)',
+        '0 12px 30px -4px rgba(249, 115, 22, 0.25), 0 4px 10px rgba(249, 115, 22, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(194, 65, 12, 0.12)',
       hoverShadow:
-        '0 18px 36px -4px rgba(99, 102, 241, 0.38), 0 8px 16px rgba(99, 102, 241, 0.18), inset 0 2px 2px rgba(255, 255, 255, 1)',
-      labelColor: 'text-indigo-950 font-bold',
+        '0 18px 36px -4px rgba(249, 115, 22, 0.38), 0 8px 16px rgba(249, 115, 22, 0.18), inset 0 2px 2px rgba(255, 255, 255, 1)',
+      labelColor: 'text-orange-950 font-bold',
       numColor: 'text-slate-900',
-      orb: 'rgba(99, 102, 241, 0.3)',
+      orb: 'rgba(249, 115, 22, 0.3)',
       isDark: false,
     },
     {
@@ -250,15 +250,15 @@ export default function Dashboard() {
       label: 'Closed',
       value: closedCount,
       link: '/tickets?status=CLOSED',
-      bg: 'linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 40%, #cbd5e1 100%)',
+      bg: 'linear-gradient(145deg, #dcfce7 0%, #bbf7d0 40%, #86efac 100%)',
       border: '1.5px solid rgba(255, 255, 255, 0.9)',
       boxShadow:
-        '0 12px 30px -4px rgba(100, 116, 139, 0.2), 0 4px 10px rgba(100, 116, 139, 0.1), inset 0 2px 2px rgba(255, 255, 255, 0.95), inset 0 -2px 4px rgba(51, 65, 85, 0.1)',
+        '0 12px 30px -4px rgba(34, 197, 94, 0.25), 0 4px 10px rgba(34, 197, 94, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(22, 101, 52, 0.12)',
       hoverShadow:
-        '0 18px 36px -4px rgba(100, 116, 139, 0.32), 0 8px 16px rgba(100, 116, 139, 0.15), inset 0 2px 2px rgba(255, 255, 255, 1)',
-      labelColor: 'text-slate-900 font-bold',
+        '0 18px 36px -4px rgba(34, 197, 94, 0.38), 0 8px 16px rgba(34, 197, 94, 0.18), inset 0 2px 2px rgba(255, 255, 255, 1)',
+      labelColor: 'text-emerald-950 font-bold',
       numColor: 'text-slate-900',
-      orb: 'rgba(148, 163, 184, 0.3)',
+      orb: 'rgba(34, 197, 94, 0.3)',
       isDark: false,
     },
     {

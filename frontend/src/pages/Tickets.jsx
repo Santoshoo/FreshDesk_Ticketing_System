@@ -189,23 +189,23 @@ export default function Tickets() {
       case 'IN_PROGRESS':
         return {
           label: 'In Progress',
-          badgeClass: 'bg-[#fef3c7] text-[#b45309]',
+          badgeClass: 'bg-[#f3e8ff] text-[#7e22ce]',
         };
       case 'PENDING':
         return {
           label: 'Pending',
-          badgeClass: 'bg-[#f1f5f9] text-[#475569]',
+          badgeClass: 'bg-[#ffe4e6] text-[#b91c1c]',
         };
       case 'RESOLVED':
         return {
           label: 'Resolved',
-          badgeClass: 'bg-[#dcfce7] text-[#15803d]',
+          badgeClass: 'bg-[#ffedd5] text-[#c2410c]',
         };
       case 'CLOSED':
       default:
         return {
           label: 'Closed',
-          badgeClass: 'bg-[#f1f5f9] text-[#64748b]',
+          badgeClass: 'bg-[#dcfce7] text-[#15803d]',
         };
     }
   };
