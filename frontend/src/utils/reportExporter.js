@@ -308,7 +308,7 @@ export function exportReportData({
     ['Report Period:', periodLabel],
     ['Generated On:', now.toLocaleString()],
     [''],
-    ['--- 1. OVERALL STATUS SUMMARY ---'],
+    ['1. OVERALL STATUS SUMMARY'],
     ['Metric', 'Ticket Count', 'Share (%)'],
     ['Total Tickets', total, '100%'],
     ['Open', summary.open || 0, total > 0 ? `${Math.round(((summary.open || 0) / total) * 100)}%` : '0%'],
@@ -318,7 +318,7 @@ export function exportReportData({
     ['Closed', summary.closed || 0, total > 0 ? `${Math.round(((summary.closed || 0) / total) * 100)}%` : '0%'],
     ['Overall Resolution Rate', `${resolutionRate}%`, ''],
     [''],
-    ['--- 2. CATEGORY-WISE BREAKDOWN ---'],
+    ['2. CATEGORY-WISE BREAKDOWN'],
     ['Category', 'Total', 'Open', 'In Progress', 'Pending', 'Resolved', 'Closed', 'Share (%)'],
     ...(activeCategories.length > 0
       ? activeCategories.map((c) => [
@@ -333,7 +333,7 @@ export function exportReportData({
         ])
       : [['No tickets recorded in this period', 0, 0, 0, 0, 0, 0, '0%']]),
     [''],
-    ['--- 3. SUPPORT GROUP BREAKDOWN ---'],
+    ['3. SUPPORT GROUP BREAKDOWN'],
     ['Support Group', 'Total', 'Open', 'In Progress', 'Pending', 'Resolved', 'Closed', 'Resolution Rate (%)'],
     ...(activeGroups.length > 0
       ? activeGroups.map((g) => [
@@ -348,7 +348,7 @@ export function exportReportData({
         ])
       : [['No group activity recorded in this period', 0, 0, 0, 0, 0, 0, '0%']]),
     [''],
-    ['--- 4. AGENT PERFORMANCE ---'],
+    ['4. AGENT PERFORMANCE'],
     ['Agent Name', 'Email', 'Role', 'Total Assigned', 'Open', 'In Progress', 'Resolved', 'Closed', 'Resolution Rate (%)'],
     ...(activeAgents.length > 0
       ? activeAgents.map((a) => [
@@ -366,16 +366,154 @@ export function exportReportData({
   ];
 
   const wsSummary = XLSX.utils.aoa_to_sheet(summarySheetData);
+
+  // Executive Styling Definitions
+  const titleStyle = {
+    font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: '1E3A8A' } },
+    alignment: { horizontal: 'left', vertical: 'center' },
+  };
+  const metaLabelStyle = {
+    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '334155' } },
+    alignment: { horizontal: 'left', vertical: 'center' },
+  };
+  const metaValueStyle = {
+    font: { name: 'Calibri', sz: 11, color: { rgb: '0F172A' } },
+    alignment: { horizontal: 'left', vertical: 'center' },
+  };
+  const sectionHeaderStyle = {
+    font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+    fill: { fgColor: { rgb: '1E3A8A' } }, // KIMS Corporate Navy Blue Highlight
+    alignment: { horizontal: 'left', vertical: 'center' },
+  };
+  const columnHeaderStyleLeft = {
+    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '0F172A' } },
+    fill: { fgColor: { rgb: 'E2E8F0' } }, // Soft Ice Slate Highlight
+    alignment: { horizontal: 'left', vertical: 'center' },
+    border: {
+      top: { style: 'thin', color: { rgb: '94A3B8' } },
+      bottom: { style: 'medium', color: { rgb: '475569' } },
+      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      right: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    },
+  };
+  const columnHeaderStyleCenter = {
+    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '0F172A' } },
+    fill: { fgColor: { rgb: 'E2E8F0' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: {
+      top: { style: 'thin', color: { rgb: '94A3B8' } },
+      bottom: { style: 'medium', color: { rgb: '475569' } },
+      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      right: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    },
+  };
+  const totalRowStyle = {
+    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: '0F172A' } },
+    fill: { fgColor: { rgb: 'F8FAFC' } },
+    alignment: { vertical: 'center' },
+    border: {
+      top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+    },
+  };
+  const dataStyleLeft = {
+    font: { name: 'Calibri', sz: 11, color: { rgb: '334155' } },
+    alignment: { horizontal: 'left', vertical: 'center' },
+    border: { bottom: { style: 'thin', color: { rgb: 'F1F5F9' } } },
+  };
+  const dataStyleCenter = {
+    font: { name: 'Calibri', sz: 11, color: { rgb: '334155' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: { bottom: { style: 'thin', color: { rgb: 'F1F5F9' } } },
+  };
+
+  const rowHeights = [];
+  const merges = [];
+
+  for (let r = 0; r < summarySheetData.length; r++) {
+    const row = summarySheetData[r];
+    const firstCell = row[0] ? String(row[0]).trim() : '';
+
+    if (firstCell.startsWith('KIMS ICT SERVICE DESK')) {
+      rowHeights.push({ hpt: 30 });
+      const cellRef = XLSX.utils.encode_cell({ r, c: 0 });
+      if (wsSummary[cellRef]) wsSummary[cellRef].s = titleStyle;
+    } else if (firstCell === 'Report Period:' || firstCell === 'Generated On:') {
+      rowHeights.push({ hpt: 20 });
+      const labelRef = XLSX.utils.encode_cell({ r, c: 0 });
+      const valRef = XLSX.utils.encode_cell({ r, c: 1 });
+      if (wsSummary[labelRef]) wsSummary[labelRef].s = metaLabelStyle;
+      if (wsSummary[valRef]) wsSummary[valRef].s = metaValueStyle;
+    } else if (/^[1-4]\.\s+[A-Z\s-]+$/.test(firstCell)) {
+      // Major Section Heading (1., 2., 3., 4.)
+      rowHeights.push({ hpt: 26 });
+      let maxCols = 8;
+      if (firstCell.startsWith('1.')) maxCols = 3;
+      else if (firstCell.startsWith('2.')) maxCols = 8;
+      else if (firstCell.startsWith('3.')) maxCols = 8;
+      else if (firstCell.startsWith('4.')) maxCols = 9;
+
+      merges.push({ s: { r, c: 0 }, e: { r, c: maxCols - 1 } });
+
+      for (let c = 0; c < maxCols; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (!wsSummary[cellRef]) {
+          wsSummary[cellRef] = { t: 's', v: '' };
+        }
+        wsSummary[cellRef].s = sectionHeaderStyle;
+      }
+    } else if (firstCell === 'Metric' || firstCell === 'Category' || firstCell === 'Support Group' || firstCell === 'Agent Name') {
+      // Column Subheaders
+      rowHeights.push({ hpt: 23 });
+      for (let c = 0; c < row.length; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (wsSummary[cellRef]) {
+          const isLeft = c === 0 || (firstCell === 'Agent Name' && (c === 1 || c === 2));
+          wsSummary[cellRef].s = isLeft ? columnHeaderStyleLeft : columnHeaderStyleCenter;
+        }
+      }
+    } else if (firstCell === 'Total Tickets' || firstCell === 'Overall Resolution Rate') {
+      // Summary / Total Rows
+      rowHeights.push({ hpt: 21 });
+      for (let c = 0; c < row.length; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (wsSummary[cellRef]) {
+          wsSummary[cellRef].s = {
+            ...totalRowStyle,
+            alignment: {
+              ...totalRowStyle.alignment,
+              horizontal: c === 0 ? 'left' : 'center',
+            },
+          };
+        }
+      }
+    } else if (firstCell === '') {
+      rowHeights.push({ hpt: 12 });
+    } else {
+      // Data Rows
+      rowHeights.push({ hpt: 20 });
+      for (let c = 0; c < row.length; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (wsSummary[cellRef]) {
+          const isLeft = c === 0 || (row.length > 8 && (c === 1 || c === 2));
+          wsSummary[cellRef].s = isLeft ? dataStyleLeft : dataStyleCenter;
+        }
+      }
+    }
+  }
+
+  wsSummary['!rows'] = rowHeights;
+  wsSummary['!merges'] = merges;
   wsSummary['!cols'] = [
-    { wch: 30 },
-    { wch: 20 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 15 },
-    { wch: 20 },
-    { wch: 20 },
+    { wch: 32 },
+    { wch: 28 },
+    { wch: 16 },
+    { wch: 16 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 14 },
+    { wch: 22 },
   ];
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Executive_Summary');
 
