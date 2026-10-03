@@ -4,25 +4,32 @@
  */
 
 /**
- * Ticket is editable ONLY when status is OPEN or PENDING.
- * When status is CLOSED, editing is strictly hidden/disabled.
+ * Ticket is editable across all lifecycle statuses up to and including RESOLVED:
+ * (OPEN, IN_PROGRESS, PENDING, ON_HOLD, RESOLVED).
+ * When status is CLOSED, editing is strictly hidden and prohibited.
  * Role: SUPER_ADMIN, ADMIN, AGENT can edit (when status allows).
  * EMPLOYEE cannot edit tickets.
  */
 export function canEditTicket(a, b) {
-  // Support both (ticket, user) and (user, ticket) invocation order
-  const ticket = a?.ticketNumber !== undefined || a?.status !== undefined ? a : b;
-  const user = a?.role !== undefined ? a : b;
+  // Accurately resolve ticket and user regardless of invocation order
+  const ticket = (a?.ticketNumber !== undefined || a?.subject !== undefined || a?.ticketTypeId !== undefined) ? a 
+    : (b?.ticketNumber !== undefined || b?.subject !== undefined || b?.ticketTypeId !== undefined) ? b 
+    : null;
+
+  const user = (a?.role !== undefined || a?.roleId !== undefined) ? a 
+    : (b?.role !== undefined || b?.roleId !== undefined) ? b 
+    : null;
 
   if (!ticket || !user) return false;
 
-  // CLOSED tickets cannot be edited (must be reopened first)
+  // CLOSED tickets are permanently locked and cannot be edited
   if (ticket.status === 'CLOSED') {
     return false;
   }
 
   // Employees cannot edit tickets
-  if (user.role === 'EMPLOYEE') {
+  const userRole = typeof user.role === 'object' ? user.role?.name : user.role;
+  if (userRole === 'EMPLOYEE') {
     return false;
   }
 
@@ -37,17 +44,29 @@ export function canEditTicket(a, b) {
  * - EMPLOYEE cannot delete tickets.
  */
 export function canDeleteTicket(a, b) {
-  // Support both (ticket, user) and (user, ticket) invocation order
-  const ticket = a?.ticketNumber !== undefined || a?.status !== undefined ? a : b;
-  const user = a?.role !== undefined ? a : b;
+  // Accurately resolve ticket and user regardless of invocation order
+  const ticket = (a?.ticketNumber !== undefined || a?.subject !== undefined || a?.ticketTypeId !== undefined) ? a 
+    : (b?.ticketNumber !== undefined || b?.subject !== undefined || b?.ticketTypeId !== undefined) ? b 
+    : null;
+
+  const user = (a?.role !== undefined || a?.roleId !== undefined) ? a 
+    : (b?.role !== undefined || b?.roleId !== undefined) ? b 
+    : null;
 
   if (!ticket || !user) return false;
 
-  if (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN') {
+  // CLOSED tickets cannot be deleted
+  if (ticket.status === 'CLOSED') {
+    return false;
+  }
+
+  const userRole = typeof user.role === 'object' ? user.role?.name : user.role;
+
+  if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
     return true;
   }
 
-  if (user.role === 'AGENT' && ticket.agentId === user.id) {
+  if (userRole === 'AGENT' && ticket.agentId === user.id) {
     return true;
   }
 

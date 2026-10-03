@@ -111,7 +111,20 @@ Selected **MySQL 8.0+** as the relational database and **Prisma ORM** as the dat
   - `dashboardRepository.getReportExportData`: Efficiently queries tickets and relations to supply accurate timestamps (`createdAt`, `resolvedAt`, `closedAt`, and history for `Last Update DateTime`).
 - **Frontend Architecture**:
   - `TicketDetails.jsx`: Dynamically aggregates and normalizes creation, transfer, status, priority, and internal note events into a unified chronological **Activity Timeline** with color-coded dot badges, directional paths (`From ➔ To`), changer names, employee IDs, and exact date/time tooltips.
-  - `reportExporter.js`: Generates clean 16-column Excel (`.xlsx` with custom 18pt bold black centered header and 12pt centered data) and CSV (`.csv`) reports strictly scoped to operational fields (`Ticket No` through `TAT`), intentionally excluding activity/transfer log columns.
+### Decision 3.12: Ticket Immutability on Closed Status & Editability Up To Resolved
+- **Requirement**: Tickets must be editable across all active and resolution lifecycle stages up to and including `RESOLVED` (`OPEN`, `IN_PROGRESS`, `PENDING`, `ON_HOLD`, `RESOLVED`). Once transitioned to `CLOSED`, the ticket becomes permanently immutable and strictly locked against further edits, deletions, reassignments, status modifications, and public replies.
+- **Backend Architecture (`ticketService.js`)**:
+  - `updateTicket`: Removed the legacy restriction that limited edits to `OPEN` and `PENDING`. Full edits are permitted for any status up to `RESOLVED`. If `ticket.status === 'CLOSED'`, requests are rejected with a `400 Bad Request` (`"Ticket is closed and cannot be edited."`).
+  - `deleteTicket`: Prohibits deleting closed tickets (`"Closed tickets cannot be deleted."`).
+  - `updateStatus`: Prohibits altering the status of an already `CLOSED` ticket (`"Cannot modify the status of a closed ticket."`).
+  - `updateAssignment`: Prohibits reassigning agent or support group on closed tickets (`"Cannot reassign a closed ticket."`).
+  - `addComment`: Prohibits replies or notes once closed (`"Ticket is closed. Adding comments or notes is disabled."`).
+- **Frontend Architecture (`TicketDetails.jsx`, `ticketPermissions.js`)**:
+  - `ticketPermissions.js`: `canEditTicket()` and `canDeleteTicket()` return `false` if `ticket.status === 'CLOSED'`.
+  - `TicketDetails.jsx`:
+    - In `RESOLVED` state, the "Edit Status" button is enabled, allowing agents to edit details or close the ticket.
+    - In `CLOSED` state, all edit controls and action buttons (Edit Status, Resolve, Close, Delete) are hidden.
+    - The reply composer is replaced with a locked notification card to prevent orphaned replies on closed tickets.
 
 ---
 

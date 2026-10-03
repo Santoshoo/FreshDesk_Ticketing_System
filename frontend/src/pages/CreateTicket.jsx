@@ -18,6 +18,7 @@ import {
   RotateCcw,
   RotateCw,
   ChevronDown,
+  ArrowLeft,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -302,13 +303,25 @@ export default function CreateTicket() {
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto pb-12 animate-in fade-in duration-150">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
-        <Link to="/dashboard" className="hover:text-slate-600 transition-colors">
-          Dashboard
-        </Link>
-        <span>&gt;</span>
-        <span className="text-slate-700 font-semibold">Create Ticket</span>
+      {/* Breadcrumb & Back Navigation */}
+      <div className="flex items-center gap-2.5 text-xs">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-95 group"
+          title="Back to previous page"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back</span>
+        </button>
+        <div className="h-3.5 w-px bg-slate-200" />
+        <div className="flex items-center gap-1.5 text-slate-400 font-medium">
+          <Link to="/dashboard" className="hover:text-slate-600 transition-colors">
+            Dashboard
+          </Link>
+          <span>&gt;</span>
+          <span className="text-slate-700 font-semibold">Create Ticket</span>
+        </div>
       </div>
 
       {/* Header */}

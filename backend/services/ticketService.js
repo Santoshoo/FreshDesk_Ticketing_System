@@ -328,25 +328,13 @@ export class TicketService {
       throw err;
     }
 
-    // TICKET EDIT BUSINESS RULE (Requirements 7, 8, 9):
-    // Ticket is editable when status = OPEN or status = PENDING.
-    // When ticket status = CLOSED, editing content is rejected unless explicitly reopening to OPEN or PENDING.
+    // TICKET EDIT BUSINESS RULE:
+    // Once closed, tickets are strictly immutable and cannot be edited.
+    // Tickets can be edited in all lifecycle statuses up to and including RESOLVED (OPEN, IN_PROGRESS, PENDING, ON_HOLD, RESOLVED).
     if (ticket.status === 'CLOSED') {
-      if (status === 'OPEN' || status === 'PENDING') {
-        // Explicitly reopening ticket to OPEN or PENDING is allowed
-      } else {
-        const err = new Error('Cannot edit a closed ticket. Please reopen the ticket first to OPEN or PENDING.');
-        err.statusCode = 400;
-        throw err;
-      }
-    } else if (ticket.status !== 'OPEN' && ticket.status !== 'PENDING') {
-      if (status === 'OPEN' || status === 'PENDING') {
-        // Switching back to OPEN or PENDING is allowed
-      } else {
-        const err = new Error('Ticket can only be edited when status is OPEN or PENDING.');
-        err.statusCode = 400;
-        throw err;
-      }
+      const err = new Error('Ticket is closed and cannot be edited.');
+      err.statusCode = 400;
+      throw err;
     }
 
     const updateData = {};
@@ -463,6 +451,13 @@ export class TicketService {
     }
 
     // TICKET DELETE BUSINESS RULE (Requirements 10, 11, 12):
+    // Once closed, tickets cannot be deleted.
+    if (ticket.status === 'CLOSED') {
+      const err = new Error('Closed tickets cannot be deleted.');
+      err.statusCode = 400;
+      throw err;
+    }
+
     // Only the AGENT currently assigned to that ticket can delete the ticket (ticket.agentId === user.id).
     // SUPER_ADMIN and ADMIN retain their delete permissions.
     // EMPLOYEE cannot delete tickets.
@@ -489,6 +484,12 @@ export class TicketService {
     if (!ticket) {
       const err = new Error('Ticket not found');
       err.statusCode = 404;
+      throw err;
+    }
+
+    if (ticket.status === 'CLOSED') {
+      const err = new Error('Ticket is closed. Adding comments or notes is disabled.');
+      err.statusCode = 400;
       throw err;
     }
 
@@ -527,6 +528,12 @@ export class TicketService {
       throw err;
     }
 
+    if (ticket.status === 'CLOSED') {
+      const err = new Error('Cannot modify the status of a closed ticket.');
+      err.statusCode = 400;
+      throw err;
+    }
+
     const previousStatus = ticket.status;
     const updated = await ticketRepository.updateStatus({
       ticketId,
@@ -561,6 +568,12 @@ export class TicketService {
     if (user.role === 'EMPLOYEE') {
       const err = new Error('Forbidden: Only agents or admins can assign tickets');
       err.statusCode = 403;
+      throw err;
+    }
+
+    if (ticket.status === 'CLOSED') {
+      const err = new Error('Cannot reassign a closed ticket.');
+      err.statusCode = 400;
       throw err;
     }
 

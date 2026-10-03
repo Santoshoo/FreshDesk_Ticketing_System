@@ -1,12 +1,23 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Menu, Search, Bell } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Menu, Search, Bell, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function Header({ onToggleSidebar }) {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isDashboard = location.pathname === '/' || location.pathname === '/dashboard';
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -24,14 +35,28 @@ export default function Header({ onToggleSidebar }) {
         boxShadow: '0 1px 8px rgba(79,70,229,0.04)',
       }}
     >
-      {/* Left: Hamburger + Search */}
-      <div className="flex items-center gap-4 flex-1 max-w-xl">
+      {/* Left: Hamburger + Back Button + Search */}
+      <div className="flex items-center gap-2.5 flex-1 max-w-xl">
         <button
           onClick={onToggleSidebar}
           className="lg:hidden p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+          title="Toggle Navigation Menu"
         >
           <Menu className="w-5 h-5" />
         </button>
+
+        {/* Back Button (Hidden on Dashboard root home screen) */}
+        {!isDashboard && (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 hover:text-slate-900 border border-slate-200/90 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs shrink-0 active:scale-95 group"
+            title="Go back to previous page"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-slate-800 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back</span>
+          </button>
+        )}
 
         <form onSubmit={handleSearch} className="relative w-full max-w-md">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94a3b8' }} />

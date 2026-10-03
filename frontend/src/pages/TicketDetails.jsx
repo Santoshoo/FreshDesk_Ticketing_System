@@ -22,6 +22,7 @@ import {
   Underline,
   List,
   Clock,
+  Lock,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -552,7 +553,7 @@ export default function TicketDetails() {
   }, [ticket?.groupId, isAgentOrAdmin]);
 
   const openEditPropertiesModal = () => {
-    if (!ticket) return;
+    if (!ticket || ticket.status === 'CLOSED') return;
     setUpdateSubject(ticket.subject || '');
     setUpdateStatus(ticket.status);
     setUpdatePriority(ticket.priority || 'MEDIUM');
@@ -666,13 +667,13 @@ export default function TicketDetails() {
     try {
       setCloseModalLoading(true);
       const targetStatus = closeModalConfig.targetStatus;
-      await ticketApi.updateStatus(id, targetStatus);
       if (remark) {
         await ticketApi.addComment(id, {
           commentType: targetStatus === 'RESOLVED' ? 'REPLY' : 'INTERNAL_NOTE',
           body: `[${targetStatus === 'RESOLVED' ? 'Resolution Summary' : 'Closure Note'}]: ${remark}`,
         });
       }
+      await ticketApi.updateStatus(id, targetStatus);
       showToast(`Ticket #${ticket.ticketNumber} marked as ${targetStatus.toLowerCase()} successfully!`, 'success');
       setCloseModalConfig((prev) => ({ ...prev, isOpen: false }));
       fetchTicket();
@@ -728,15 +729,27 @@ export default function TicketDetails() {
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-12 animate-in fade-in duration-200">
-      {/* ── Breadcrumb matching Screenshot 2 ── */}
-      <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
-        <Link to="/tickets" className="hover:text-slate-700 transition-colors">
-          Tickets
-        </Link>
-        <span>&gt;</span>
-        <span className="font-mono text-slate-700 font-bold">#{ticket.ticketNumber}</span>
-        <span>&gt;</span>
-        <span className="text-slate-500 truncate max-w-xs">{ticket.subject}</span>
+      {/* ── Breadcrumb & Back Navigation ── */}
+      <div className="flex items-center gap-2.5 text-xs">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200 rounded-lg text-xs font-semibold shadow-2xs transition-all cursor-pointer active:scale-95 group"
+          title="Back to previous page"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-700 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back</span>
+        </button>
+        <div className="h-3.5 w-px bg-slate-200" />
+        <div className="flex items-center gap-2 text-slate-400 font-medium truncate">
+          <Link to="/tickets" className="hover:text-slate-700 transition-colors">
+            Tickets
+          </Link>
+          <span>&gt;</span>
+          <span className="font-mono text-slate-700 font-bold">#{ticket.ticketNumber}</span>
+          <span>&gt;</span>
+          <span className="text-slate-500 truncate max-w-xs">{ticket.subject}</span>
+        </div>
       </div>
 
       {/* ── Top Header Row (Title, Badges & Action Buttons matching Screenshot 2) ── */}
@@ -780,7 +793,7 @@ export default function TicketDetails() {
 
         {/* Action Buttons: Edit Status (dark navy), Resolve, Close, Delete */}
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-          {canEditTicket(user, ticket) && (
+          {ticket.status !== 'CLOSED' && canEditTicket(user, ticket) && (
             <button
               type="button"
               onClick={openEditPropertiesModal}
@@ -813,7 +826,7 @@ export default function TicketDetails() {
             </button>
           )}
 
-          {canDeleteTicket(user, ticket) && (
+          {ticket.status !== 'CLOSED' && canDeleteTicket(user, ticket) && (
             <button
               type="button"
               onClick={() => setIsDeleteModalOpen(true)}
@@ -942,103 +955,115 @@ export default function TicketDetails() {
             );
           })}
 
-          {/* Composer Box (Matching Screenshot 2) */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 space-y-3">
-            {/* Formatting Toolbar */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-              <div className="flex items-center gap-1 text-slate-500">
-                <button
-                  type="button"
-                  onClick={() => setCommentText((prev) => prev + '**bold**')}
-                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 font-bold text-xs cursor-pointer"
-                  title="Bold"
-                >
-                  <Bold className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCommentText((prev) => prev + '*italic*')}
-                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 italic text-xs cursor-pointer"
-                  title="Italic"
-                >
-                  <Italic className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCommentText((prev) => prev + '\n- ')}
-                  className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 text-xs cursor-pointer"
-                  title="Bullet List"
-                >
-                  <List className="w-3.5 h-3.5" />
-                </button>
+          {/* Composer Box (Hidden and locked when ticket is CLOSED) */}
+          {ticket.status === 'CLOSED' ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center space-y-2">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-200 text-slate-600 mb-0.5">
+                <Lock className="w-5 h-5" />
               </div>
-
-              {/* Mode Selector: Reply vs Internal Note */}
-              <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => setComposerMode('REPLY')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    composerMode === 'REPLY'
-                      ? 'bg-white text-slate-900 shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Reply
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setComposerMode('INTERNAL_NOTE')}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    composerMode === 'INTERNAL_NOTE'
-                      ? 'bg-amber-500 text-white shadow-2xs'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  Internal Note
-                </button>
-              </div>
+              <p className="text-xs font-bold text-slate-800">This ticket is closed</p>
+              <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
+                No further replies, internal notes, or property modifications can be made to this ticket.
+              </p>
             </div>
-
-            <form onSubmit={handleSendReply}>
-              <textarea
-                rows={3}
-                placeholder={
-                  composerMode === 'INTERNAL_NOTE'
-                    ? 'Write an internal note (only visible to staff & agents)...'
-                    : 'Type a reply to the requester...'
-                }
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                className="w-full text-xs text-slate-800 placeholder:text-slate-400 border-0 focus:outline-none resize-none p-1 bg-transparent min-h-[70px]"
-              />
-
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <div className="flex items-center gap-2 text-slate-400">
-                  <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Attach file">
-                    <Paperclip className="w-4 h-4" />
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 space-y-3">
+              {/* Formatting Toolbar */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-1 text-slate-500">
+                  <button
+                    type="button"
+                    onClick={() => setCommentText((prev) => prev + '**bold**')}
+                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 font-bold text-xs cursor-pointer"
+                    title="Bold"
+                  >
+                    <Bold className="w-3.5 h-3.5" />
                   </button>
-                  <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Add link">
-                    <Link2 className="w-4 h-4" />
+                  <button
+                    type="button"
+                    onClick={() => setCommentText((prev) => prev + '*italic*')}
+                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 italic text-xs cursor-pointer"
+                    title="Italic"
+                  >
+                    <Italic className="w-3.5 h-3.5" />
                   </button>
-                  <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Emoji">
-                    <Smile className="w-4 h-4" />
+                  <button
+                    type="button"
+                    onClick={() => setCommentText((prev) => prev + '\n- ')}
+                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 text-xs cursor-pointer"
+                    title="Bullet List"
+                  >
+                    <List className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={submittingComment || !commentText.trim()}
-                  className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-40 cursor-pointer text-white hover:opacity-95 active:scale-95"
-                  style={{
-                    background: composerMode === 'INTERNAL_NOTE' ? '#d97706' : '#1e1b4b',
-                  }}
-                >
-                  <span>{composerMode === 'INTERNAL_NOTE' ? 'Add Note' : 'Add Reply'}</span>
-                </button>
+                {/* Mode Selector: Reply vs Internal Note */}
+                <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setComposerMode('REPLY')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      composerMode === 'REPLY'
+                        ? 'bg-white text-slate-900 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Reply
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setComposerMode('INTERNAL_NOTE')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      composerMode === 'INTERNAL_NOTE'
+                        ? 'bg-amber-500 text-white shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Internal Note
+                  </button>
+                </div>
               </div>
-            </form>
-          </div>
+
+              <form onSubmit={handleSendReply}>
+                <textarea
+                  rows={3}
+                  placeholder={
+                    composerMode === 'INTERNAL_NOTE'
+                      ? 'Write an internal note (only visible to staff & agents)...'
+                      : 'Type a reply to the requester...'
+                  }
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  className="w-full text-xs text-slate-800 placeholder:text-slate-400 border-0 focus:outline-none resize-none p-1 bg-transparent min-h-[70px]"
+                />
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Attach file">
+                      <Paperclip className="w-4 h-4" />
+                    </button>
+                    <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Add link">
+                      <Link2 className="w-4 h-4" />
+                    </button>
+                    <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Emoji">
+                      <Smile className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={submittingComment || !commentText.trim()}
+                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-40 cursor-pointer text-white hover:opacity-95 active:scale-95"
+                    style={{
+                      background: composerMode === 'INTERNAL_NOTE' ? '#d97706' : '#1e1b4b',
+                    }}
+                  >
+                    <span>{composerMode === 'INTERNAL_NOTE' ? 'Add Note' : 'Add Reply'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* ── Right Column: Properties Panel (Ticket Info, Requester, Activity Timeline) ── */}
