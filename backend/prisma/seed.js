@@ -30,7 +30,7 @@ async function main() {
   const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD || 'Kims@123';
   const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
-  const adminEmail = 'admin@kims.hospital';
+  const adminEmail = 'admin@kims.ac.in';
   const adminEmployeeId = 'ADMIN001';
 
   await prisma.user.upsert({

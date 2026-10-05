@@ -63,7 +63,7 @@ async function runTests() {
     // 0. Login as Administrator to obtain real JWT Access Token
     const loginRes = await request('/auth/login', {
       method: 'POST',
-      body: { email: 'admin@kims.hospital', password: 'Kims@123' }
+      body: { email: 'admin@kims.ac.in', password: 'Kims@123' }
     });
     assert(loginRes.status === 200 && loginRes.body?.data?.accessToken, 'Admin logged in and obtained JWT access token');
     const token = loginRes.body.data.accessToken;
