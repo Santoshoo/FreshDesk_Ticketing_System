@@ -450,7 +450,7 @@ export default function ResetPasswordModal({ isOpen, onClose, initialIdentifier 
                 Password Reset Successfully!
               </h3>
               <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Your password has been changed. You can now log into the KIMS ICT Service Desk with your new password.
+                Your password has been changed. You can now log into KIMS ICT with your new password.
               </p>
             </div>
 

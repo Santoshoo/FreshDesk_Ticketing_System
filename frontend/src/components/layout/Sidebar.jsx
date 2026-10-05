@@ -96,13 +96,10 @@ export default function Sidebar({ isOpen, onClose }) {
             +
           </div>
           <div className="min-w-0">
-            <h1 className="font-extrabold text-white text-sm tracking-tight truncate leading-tight flex items-center gap-1.5">
+            <h1 className="font-extrabold text-white text-base tracking-tight truncate leading-tight flex items-center gap-1.5">
               <span>KIMS</span>
               <span style={{ color: '#818cf8' }}>ICT</span>
             </h1>
-            <p className="text-[9px] font-semibold tracking-widest uppercase" style={{ color: '#94a3b8' }}>
-              Service Desk
-            </p>
           </div>
         </div>
 
