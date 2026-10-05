@@ -296,9 +296,7 @@ export function exportReportData({
     }
   }
 
-  XLSX.utils.book_append_sheet(wb, wsTickets, 'Tickets_Data');
-
-  // --- SHEET 2: EXECUTIVE SUMMARY & DISTRIBUTION ---
+  // --- SHEET 1 (Constructed): EXECUTIVE SUMMARY & DISTRIBUTION ---
   const activeCategories = categoryReport.filter((c) => c.total > 0);
   const activeGroups = groupReport.filter((g) => g.total > 0);
   const activeAgents = agentReport.filter((a) => a.total > 0);
@@ -515,7 +513,12 @@ export function exportReportData({
     { wch: 14 },
     { wch: 22 },
   ];
+
+  // 1st Sheet: Executive Summary
   XLSX.utils.book_append_sheet(wb, wsSummary, 'Executive_Summary');
+
+  // 2nd Sheet: Detailed Tickets Data
+  XLSX.utils.book_append_sheet(wb, wsTickets, 'Tickets_Data');
 
   // Trigger browser download
   XLSX.writeFile(wb, `${baseFilename}.xlsx`);

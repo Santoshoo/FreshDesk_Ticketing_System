@@ -104,6 +104,9 @@ export default function Dashboard() {
   const resolvedCount = summary.resolved || 0;
   const closedCount = summary.closed || 0;
 
+  // Active tickets total strictly excluding closed tickets
+  const activeTotalCount = openCount + pendingCount + onHoldCount + inProgressCount + resolvedCount;
+
   // Priority Theme Helper (High = Red, Medium = Yellow, Low = Green) with Soft 3D Glass & Light Glow
   const getPriorityTheme = (priority = 'MEDIUM') => {
     const p = String(priority || 'MEDIUM').toUpperCase();
@@ -246,25 +249,9 @@ export default function Dashboard() {
       isDark: false,
     },
     {
-      key: 'closed',
-      label: 'Closed',
-      value: closedCount,
-      link: '/tickets?status=CLOSED',
-      bg: 'linear-gradient(145deg, #dcfce7 0%, #bbf7d0 40%, #86efac 100%)',
-      border: '1.5px solid rgba(255, 255, 255, 0.9)',
-      boxShadow:
-        '0 12px 30px -4px rgba(34, 197, 94, 0.25), 0 4px 10px rgba(34, 197, 94, 0.12), inset 0 2px 2px rgba(255, 255, 255, 0.9), inset 0 -2px 4px rgba(22, 101, 52, 0.12)',
-      hoverShadow:
-        '0 18px 36px -4px rgba(34, 197, 94, 0.38), 0 8px 16px rgba(34, 197, 94, 0.18), inset 0 2px 2px rgba(255, 255, 255, 1)',
-      labelColor: 'text-emerald-950 font-bold',
-      numColor: 'text-slate-900',
-      orb: 'rgba(34, 197, 94, 0.3)',
-      isDark: false,
-    },
-    {
       key: 'total',
       label: 'Total',
-      value: totalCount,
+      value: activeTotalCount,
       link: '/tickets',
       bg: 'linear-gradient(145deg, #2e1065 0%, #1e1b4b 50%, #0f172a 100%)',
       border: '1.5px solid rgba(167, 139, 250, 0.35)',
@@ -344,8 +331,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── 6 Stat Boxes with 3D Depth, Luminous Glow & Specular Glassmorphism ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 sm:gap-4">
+      {/* ── 5 Stat Boxes with 3D Depth, Luminous Glow & Specular Glassmorphism ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
         {statCardConfigs.map((c) => (
           <div
             key={c.key}

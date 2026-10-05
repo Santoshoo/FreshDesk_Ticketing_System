@@ -44,8 +44,17 @@ export class DashboardService {
     return dashboardRepository.getAgentReport(where);
   }
 
-  async getReportExport(user, { periodType = 'month', date, year, month, startDate, endDate, scope } = {}) {
+  async getReportExport(user, { periodType = 'month', date, year, month, startDate, endDate, scope, status } = {}) {
     const where = this._buildFilter(user, scope);
+
+    if (status && status !== 'ALL') {
+      if (status === 'PENDING') {
+        where.status = { in: ['PENDING', 'ON_HOLD'] };
+      } else {
+        where.status = status;
+      }
+    }
+
     let parsedStart = null;
     let parsedEnd = null;
 
@@ -73,6 +82,9 @@ export class DashboardService {
     } else if (periodType === 'custom') {
       if (startDate) parsedStart = new Date(`${startDate}T00:00:00.000`);
       if (endDate) parsedEnd = new Date(`${endDate}T23:59:59.999`);
+    } else if (periodType === 'all') {
+      parsedStart = null;
+      parsedEnd = null;
     }
 
     const data = await dashboardRepository.getReportExportData(where, parsedStart, parsedEnd);

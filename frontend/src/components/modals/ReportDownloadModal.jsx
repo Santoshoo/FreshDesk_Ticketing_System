@@ -11,13 +11,15 @@ import {
   CheckCircle2,
   RefreshCw,
   Sparkles,
+  Filter,
 } from 'lucide-react';
 import dashboardApi from '../../services/dashboardApi.js';
 import { exportReportData } from '../../utils/reportExporter.js';
 
 export default function ReportDownloadModal({ isOpen, onClose }) {
-  const [periodType, setPeriodType] = useState('month'); // 'month' | 'week' | 'day'
+  const [periodType, setPeriodType] = useState('all'); // 'all' | 'month' | 'week' | 'day'
   const [format, setFormat] = useState('xlsx'); // 'xlsx' | 'csv'
+  const [selectedStatus, setSelectedStatus] = useState('PENDING'); // 'ALL' | 'PENDING' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -47,6 +49,16 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
     { value: 10, label: 'October' },
     { value: 11, label: 'November' },
     { value: 12, label: 'December' },
+  ];
+
+  // Status Filter Options
+  const statusOptions = [
+    { value: 'ALL', label: 'All Statuses' },
+    { value: 'PENDING', label: 'Pending' },
+    { value: 'OPEN', label: 'Open' },
+    { value: 'IN_PROGRESS', label: 'In Progress' },
+    { value: 'RESOLVED', label: 'Resolved' },
+    { value: 'CLOSED', label: 'Closed' },
   ];
 
   // Calculate Week bounds for display
@@ -109,6 +121,9 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
 
   // Human readable active period description
   const activePeriodLabel = useMemo(() => {
+    if (periodType === 'all') {
+      return 'All Time (Total History)';
+    }
     if (periodType === 'day') {
       const d = new Date(`${selectedDate}T12:00:00`);
       return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
@@ -130,7 +145,7 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
       setError('');
       setSuccessMsg('');
 
-      const params = { periodType };
+      const params = { periodType, status: selectedStatus };
 
       if (periodType === 'day') {
         params.date = selectedDate;
@@ -148,18 +163,45 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
         throw new Error(res.message || 'Failed to fetch report data.');
       }
 
-      const reportData = res.data;
+      const reportData = { ...res.data };
+
+      // Ensure tickets strictly adhere to selected status filter
+      if (selectedStatus !== 'ALL') {
+        if (selectedStatus === 'PENDING') {
+          reportData.tickets = (reportData.tickets || []).filter(
+            (t) => t.status === 'PENDING' || t.status === 'ON_HOLD'
+          );
+        } else {
+          reportData.tickets = (reportData.tickets || []).filter(
+            (t) => t.status === selectedStatus
+          );
+        }
+      }
+
       const count = reportData.tickets?.length || 0;
+
+      if (count === 0) {
+        setError(
+          `No ${
+            selectedStatus === 'ALL' ? '' : selectedStatus + ' '
+          }tickets found for the selected period (${activePeriodLabel}). The system's existing tickets were created in September 2026. Try selecting 'All Time' or 'Last Month'.`
+        );
+        return;
+      }
 
       // Trigger export utility
       exportReportData({
         data: reportData,
         format,
-        periodLabel: activePeriodLabel,
-        filenamePrefix: `KIMS_Tickets_${periodType.toUpperCase()}`,
+        periodLabel: `${activePeriodLabel}${selectedStatus !== 'ALL' ? ` (${selectedStatus})` : ''}`,
+        filenamePrefix: `KIMS_Tickets_${periodType.toUpperCase()}_${selectedStatus}`,
       });
 
-      setSuccessMsg(`Successfully generated ${format.toUpperCase()} report (${count} tickets included).`);
+      setSuccessMsg(
+        `Successfully generated ${format.toUpperCase()} report (${count} ${
+          selectedStatus === 'ALL' ? '' : selectedStatus + ' '
+        }tickets included).`
+      );
       setTimeout(() => {
         onClose();
       }, 1400);
@@ -206,11 +248,24 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
           <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
             Select Time Interval
           </label>
-          <div className="grid grid-cols-3 gap-2 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">
+          <div className="grid grid-cols-4 gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60">
+            <button
+              type="button"
+              onClick={() => setPeriodType('all')}
+              className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                periodType === 'all'
+                  ? 'bg-white text-indigo-600 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+              <span>All Time</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setPeriodType('month')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 periodType === 'month'
                   ? 'bg-white text-indigo-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -223,7 +278,7 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
             <button
               type="button"
               onClick={() => setPeriodType('week')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 periodType === 'week'
                   ? 'bg-white text-indigo-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -236,7 +291,7 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
             <button
               type="button"
               onClick={() => setPeriodType('day')}
-              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
                 periodType === 'day'
                   ? 'bg-white text-indigo-600 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -250,6 +305,13 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
 
         {/* Dynamic Controls based on Period Type */}
         <div className="p-4 bg-slate-50/70 rounded-2xl border border-slate-200/70 mb-5 space-y-3">
+          {/* TAB 0: ALL-TIME */}
+          {periodType === 'all' && (
+            <div className="py-2 px-3 bg-white/90 rounded-xl border border-slate-200/80 text-xs text-slate-600 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-500 shrink-0" />
+              <span>Exports all tickets matching the selected status across the entire database history.</span>
+            </div>
+          )}
           {/* TAB 1: MONTH-WISE */}
           {periodType === 'month' && (
             <div>
@@ -375,6 +437,29 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
             <span className="font-semibold text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100/80">
               {activePeriodLabel}
             </span>
+          </div>
+        </div>
+
+        {/* Status Selection Dropdown */}
+        <div className="mb-5">
+          <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+            Select Ticket Status
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <Filter className="w-3.5 h-3.5 text-indigo-500" />
+            </div>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full pl-9 pr-8 py-2.5 text-xs font-semibold bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-2xs transition-colors"
+            >
+              {statusOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
