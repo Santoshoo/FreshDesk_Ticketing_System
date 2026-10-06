@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Mail,
   Plus,
@@ -14,12 +14,308 @@ import {
   ChevronRight,
   Filter,
   Upload,
+  ChevronDown,
+  Check,
+  X,
 } from 'lucide-react';
 import employeeEmailApi from '../../services/employeeEmailApi.js';
 import departmentApi from '../../services/departmentApi.js';
 import { Card, Modal, EmptyState } from '../../components/ui/index.jsx';
 import BulkEmailUploadModal from '../../components/modals/BulkEmailUploadModal.jsx';
 import { useToast } from '../../context/ToastContext.jsx';
+
+// Searchable Department Combobox for Modal Form
+function SearchableDepartmentSelect({ value, onChange, departments = [] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef(null);
+
+  const selectedDepartment = departments.find((d) => String(d.id) === String(value));
+
+  const filteredDepartments = useMemo(() => {
+    if (!searchQuery.trim()) return departments;
+    const q = searchQuery.toLowerCase().trim();
+    return departments.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        (d.description && d.description.toLowerCase().includes(q))
+    );
+  }, [departments, searchQuery]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearchQuery('');
+        }}
+        className={`w-full px-3 py-2 text-xs border rounded-xl flex items-center justify-between text-left transition-all cursor-pointer bg-white ${
+          isOpen
+            ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-xs'
+            : 'border-slate-300 hover:border-slate-400'
+        }`}
+      >
+        <div className="flex items-center gap-2 truncate">
+          <Building2
+            className={`w-3.5 h-3.5 shrink-0 ${selectedDepartment ? 'text-blue-600' : 'text-slate-400'}`}
+          />
+          {selectedDepartment ? (
+            <span className="font-semibold text-slate-800 truncate">
+              {selectedDepartment.name}
+            </span>
+          ) : (
+            <span className="text-slate-400 italic">-- No Department Assigned --</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0 ml-2">
+          {selectedDepartment && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange('');
+              }}
+              className="p-0.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Clear department"
+            >
+              <X className="w-3 h-3" />
+            </span>
+          )}
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </button>
+
+      {/* Popover Dropdown */}
+      {isOpen && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in duration-150">
+          {/* Search Box */}
+          <div className="p-2 border-b border-slate-100 bg-slate-50/80">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search department (e.g. IT, Accounts, Cardio)..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-800 placeholder:text-slate-400"
+              />
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1 px-1">
+              <span>{filteredDepartments.length} departments available</span>
+              {searchQuery && <span>Filtered by &ldquo;{searchQuery}&rdquo;</span>}
+            </div>
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-56 overflow-y-auto divide-y divide-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                onChange('');
+                setIsOpen(false);
+              }}
+              className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
+                !value ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              <span className="italic text-slate-500">-- No Department Assigned --</span>
+              {!value && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+            </button>
+
+            {filteredDepartments.length > 0 ? (
+              filteredDepartments.map((dept) => {
+                const isSelected = String(dept.id) === String(value);
+                return (
+                  <button
+                    key={dept.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(dept.id);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-blue-50 text-blue-700 font-bold'
+                        : 'text-slate-700 hover:bg-slate-100/80 font-medium'
+                    }`}
+                  >
+                    <span className="truncate pr-2">{dept.name}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                  </button>
+                );
+              })
+            ) : (
+              <div className="p-3 text-center text-xs text-slate-400">
+                No departments found matching &ldquo;{searchQuery}&rdquo;
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Searchable Department Filter for Table Header
+function SearchableDepartmentFilter({ value, onChange, departments = [] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef(null);
+
+  const selectedDepartment = departments.find((d) => String(d.id) === String(value));
+
+  const filteredDepartments = useMemo(() => {
+    if (!searchQuery.trim()) return departments;
+    const q = searchQuery.toLowerCase().trim();
+    return departments.filter(
+      (d) =>
+        d.name.toLowerCase().includes(q) ||
+        (d.description && d.description.toLowerCase().includes(q))
+    );
+  }, [departments, searchQuery]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  let label = 'All Departments';
+  if (value === 'unassigned') {
+    label = '⚠️ Without Dept (Unassigned)';
+  } else if (selectedDepartment) {
+    label = selectedDepartment.name;
+  }
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearchQuery('');
+        }}
+        className={`text-xs bg-slate-50 border rounded-xl px-3 py-1.5 flex items-center gap-2 font-medium transition-colors cursor-pointer max-w-[220px] truncate ${
+          isOpen
+            ? 'border-blue-500 bg-white ring-2 ring-blue-500/20'
+            : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+        }`}
+      >
+        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+        <span className="truncate">{label}</span>
+        {value && (
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange('');
+            }}
+            className="p-0.5 text-slate-400 hover:text-slate-700 rounded transition-colors ml-auto cursor-pointer"
+            title="Clear filter"
+          >
+            <X className="w-3 h-3" />
+          </span>
+        )}
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 sm:left-0 top-full mt-1.5 w-72 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in duration-150">
+          <div className="p-2 border-b border-slate-100 bg-slate-50/80">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                autoFocus
+                placeholder="Search department filter..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-2.5 py-1 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 text-slate-800 placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-56 overflow-y-auto divide-y divide-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                onChange('');
+                setIsOpen(false);
+              }}
+              className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
+                !value ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-50 font-medium'
+              }`}
+            >
+              <span>All Departments</span>
+              {!value && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                onChange('unassigned');
+                setIsOpen(false);
+              }}
+              className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
+                value === 'unassigned'
+                  ? 'bg-amber-50 text-amber-800 font-bold'
+                  : 'text-amber-700 hover:bg-amber-50 font-medium'
+              }`}
+            >
+              <span>⚠️ Without Dept (Unassigned)</span>
+              {value === 'unassigned' && <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
+            </button>
+
+            {filteredDepartments.map((dept) => {
+              const isSelected = String(dept.id) === String(value);
+              return (
+                <button
+                  key={dept.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(dept.id);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-50 text-blue-700 font-bold'
+                      : 'text-slate-700 hover:bg-slate-100/80 font-medium'
+                  }`}
+                >
+                  <span className="truncate pr-2">{dept.name}</span>
+                  {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function EmployeeEmailMaster() {
   const { showToast } = useToast();
@@ -57,13 +353,14 @@ export default function EmployeeEmailMaster() {
   // Bulk Upload Modal State
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
-  // Fetch departments on mount
+  // Fetch all active departments on mount (sorted alphabetically)
   useEffect(() => {
     async function loadDepartments() {
       try {
-        const res = await departmentApi.list({ limit: 100, status: 'ACTIVE' });
+        const res = await departmentApi.list({ limit: 1000, status: 'ACTIVE' });
         if (res.success && res.data) {
-          setDepartments(res.data);
+          const sorted = [...res.data].sort((a, b) => a.name.localeCompare(b.name));
+          setDepartments(sorted);
         }
       } catch (err) {
         console.error('Failed to load departments:', err);
@@ -116,7 +413,7 @@ export default function EmployeeEmailMaster() {
     setFormData({
       name: '',
       email: '',
-      departmentId: departments[0]?.id || '',
+      departmentId: '',
       isActive: true,
     });
     setFormError('');
@@ -128,7 +425,7 @@ export default function EmployeeEmailMaster() {
     setFormData({
       name: emailItem.name || '',
       email: emailItem.email,
-      departmentId: emailItem.departmentId || '',
+      departmentId: emailItem.departmentId ? String(emailItem.departmentId) : '',
       isActive: emailItem.isActive,
     });
     setFormError('');
@@ -141,19 +438,46 @@ export default function EmployeeEmailMaster() {
       setFormLoading(true);
       setFormError('');
 
+      const cleanDeptId = formData.departmentId ? parseInt(formData.departmentId, 10) : null;
+      const selectedDeptObj = cleanDeptId ? departments.find((d) => d.id === cleanDeptId) : null;
+
       if (editingEmail) {
         await employeeEmailApi.update(editingEmail.id, {
           name: formData.name.trim() || null,
           email: formData.email.trim(),
-          departmentId: formData.departmentId ? parseInt(formData.departmentId, 10) : null,
+          departmentId: cleanDeptId,
           isActive: formData.isActive,
         });
-        showToast('Employee email updated successfully!', 'success');
+
+        // Optimistically update the UI row immediately
+        setEmails((prev) =>
+          prev.map((item) =>
+            item.id === editingEmail.id
+              ? {
+                  ...item,
+                  name: formData.name.trim() || null,
+                  email: formData.email.trim(),
+                  departmentId: cleanDeptId,
+                  department: selectedDeptObj
+                    ? { id: selectedDeptObj.id, name: selectedDeptObj.name }
+                    : null,
+                  isActive: formData.isActive,
+                }
+              : item
+          )
+        );
+
+        showToast(
+          cleanDeptId
+            ? `Assigned to ${selectedDeptObj?.name} and updated successfully!`
+            : 'Employee email updated successfully!',
+          'success'
+        );
       } else {
         await employeeEmailApi.create({
           name: formData.name.trim() || null,
           email: formData.email.trim(),
-          departmentId: formData.departmentId ? parseInt(formData.departmentId, 10) : null,
+          departmentId: cleanDeptId,
           isActive: formData.isActive,
         });
         showToast('Employee email registered successfully!', 'success');
@@ -304,19 +628,12 @@ export default function EmployeeEmailMaster() {
 
         {/* Dropdowns */}
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Department Filter */}
-          <select
+          {/* Searchable Department Filter */}
+          <SearchableDepartmentFilter
             value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
-            className="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none text-slate-700 font-medium"
-          >
-            <option value="">All Departments</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+            onChange={(deptId) => setSelectedDept(deptId)}
+            departments={departments}
+          />
 
           {/* Status Filter */}
           <select
@@ -393,18 +710,29 @@ export default function EmployeeEmailMaster() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5 text-slate-600 font-medium">{item.email}</td>
-                        {/* Department Soft Pill Badge */}
+                        {/* Department Soft Pill Badge or Quick Assign Button */}
                         <td className="px-5 py-3.5">
                           {item.department ? (
-                            <span
-                              className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${getDepartmentColor(
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(item)}
+                              title="Click to edit/reassign department"
+                              className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold cursor-pointer hover:opacity-85 transition-opacity ${getDepartmentColor(
                                 item.department.name
                               )}`}
                             >
                               {item.department.name}
-                            </span>
+                            </button>
                           ) : (
-                            <span className="text-slate-400 italic">None</span>
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(item)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 shadow-2xs transition-all cursor-pointer active:scale-95 group"
+                              title="No department assigned. Click to assign a department."
+                            >
+                              <Building2 className="w-3 h-3 text-amber-500 group-hover:scale-110 transition-transform" />
+                              <span>+ Assign Dept</span>
+                            </button>
                           )}
                         </td>
                         {/* Status Soft Pill Badge */}
@@ -548,18 +876,11 @@ export default function EmployeeEmailMaster() {
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Department <span className="text-slate-400 font-normal">(Optional)</span>
             </label>
-            <select
+            <SearchableDepartmentSelect
               value={formData.departmentId}
-              onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-              className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-            >
-              <option value="">-- No Department Assigned --</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </select>
+              onChange={(deptId) => setFormData({ ...formData, departmentId: deptId })}
+              departments={departments}
+            />
           </div>
 
           <div>

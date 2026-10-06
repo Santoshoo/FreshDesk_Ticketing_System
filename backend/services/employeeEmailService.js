@@ -26,7 +26,11 @@ export class EmployeeEmailService {
     }
 
     if (departmentId) {
-      where.departmentId = parseInt(departmentId, 10);
+      if (departmentId === 'none' || departmentId === 'unassigned') {
+        where.departmentId = null;
+      } else {
+        where.departmentId = parseInt(departmentId, 10);
+      }
     }
 
     if (status === 'ACTIVE') {
@@ -232,20 +236,9 @@ export class EmployeeEmailService {
         if (deptMap.has(lowerDept)) {
           departmentId = deptMap.get(lowerDept);
         } else {
-          try {
-            const newDept = await departmentRepository.create({
-              name: cleanDeptName,
-              status: 'ACTIVE',
-            });
-            departmentId = newDept.id;
-            deptMap.set(lowerDept, departmentId);
-          } catch (deptErr) {
-            const existingDept = await departmentRepository.findByName(cleanDeptName);
-            if (existingDept) {
-              departmentId = existingDept.id;
-              deptMap.set(lowerDept, departmentId);
-            }
-          }
+          // Do not auto-create duplicate departments from Excel upload variations.
+          // Leave departmentId as null so admin can assign from the official Department Master.
+          departmentId = null;
         }
       }
 

@@ -19,6 +19,8 @@ import {
   RotateCw,
   ChevronDown,
   ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -199,8 +201,26 @@ export default function CreateTicket() {
     setAttachments(attachments.filter((a) => a.id !== id));
   };
 
+  const resetForm = () => {
+    setSelectedContact(null);
+    setContactSearch('');
+    setContactResults([]);
+    setSubject('');
+    setDescription('');
+    if (editor) editor.commands.setContent('');
+    setAttachments([]);
+    setTicketTypeId('');
+    setGroupId('');
+    setPriority('');
+    setAgentId('');
+    setStatus('OPEN');
+    setError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return; // Prevent double submit
     if (!selectedContact) {
       setError('Please select a valid contact requester.');
       showToast('Please select a contact requester.', 'error');
@@ -273,21 +293,13 @@ export default function CreateTicket() {
       const res = await ticketApi.create(payload);
 
       if (res.success) {
-        showToast(`Ticket #${res.data?.ticketNumber || ''} created successfully!`, 'success');
-        if (createAnother) {
-          setSelectedContact(null);
-          setContactSearch('');
-          setSubject('');
-          setDescription('');
-          if (editor) editor.commands.setContent('');
-          setAttachments([]);
-          setTicketTypeId('');
-          setGroupId('');
-          setPriority('');
-          setAgentId('');
-          setStatus('OPEN');
-        } else {
-          setCreatedTicket(res.data);
+        const newTicket = res.data;
+        showToast(`Ticket #${newTicket?.ticketNumber || ''} created successfully!`, 'success');
+        // Option C: Immediately reset form fields to prevent duplicate ticket creation
+        resetForm();
+        setCreatedTicket(newTicket);
+
+        if (!createAnother) {
           setShowSuccessModal(true);
         }
       }
@@ -331,6 +343,35 @@ export default function CreateTicket() {
           Fill in the details below to create a new support ticket.
         </p>
       </div>
+
+      {/* Ticket Created Notification Banner when Success Modal is dismissed */}
+      {createdTicket && !showSuccessModal && (
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center justify-between gap-3 shadow-2xs animate-in fade-in duration-200">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              Ticket <strong className="font-mono text-emerald-900 font-bold">#{createdTicket.ticketNumber}</strong> was created successfully. The form is clean for a new ticket.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to={`/tickets/${createdTicket.id}`}
+              className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] shadow-sm transition-all"
+            >
+              <span>View &amp; Update Ticket</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setCreatedTicket(null)}
+              className="text-emerald-500 hover:text-emerald-800 p-1 cursor-pointer"
+              title="Dismiss banner"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2.5">
@@ -861,8 +902,8 @@ export default function CreateTicket() {
               </button>
               <button
                 type="submit"
-                disabled={loading}
-                className="px-5 py-2 bg-[#6366f1] hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                disabled={loading || !subject.trim() || !selectedContact}
+                className="px-5 py-2 bg-[#6366f1] hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? 'Creating...' : 'Create Ticket'}
               </button>
@@ -885,16 +926,7 @@ export default function CreateTicket() {
         onCreateAnother={() => {
           setShowSuccessModal(false);
           setCreatedTicket(null);
-          setSelectedContact(null);
-          setContactSearch('');
-          setSubject('');
-          setDescription('');
-          setAttachments([]);
-          setTicketTypeId('');
-          setGroupId('');
-          setPriority('');
-          setAgentId('');
-          setStatus('');
+          resetForm();
         }}
         onBackToDashboard={() => {
           setShowSuccessModal(false);
