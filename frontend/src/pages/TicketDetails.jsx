@@ -511,23 +511,27 @@ export default function TicketDetails() {
   });
   const [closeModalLoading, setCloseModalLoading] = useState(false);
 
-  const fetchTicket = async () => {
+  const fetchTicket = async (isSilent = false) => {
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
       const res = await ticketApi.getById(id);
       if (res.success && res.data) {
         setTicket(res.data);
-        setUpdateStatus(res.data.status);
-        setUpdatePriority(res.data.priority || 'MEDIUM');
-        setUpdateGroupId(res.data.groupId ? String(res.data.groupId) : '');
-        setUpdateTicketTypeId(res.data.ticketTypeId ? String(res.data.ticketTypeId) : '');
-        setUpdateAgentId(res.data.agentId ? String(res.data.agentId) : '');
+        if (!isUpdateModalOpen) {
+          setUpdateStatus(res.data.status);
+          setUpdatePriority(res.data.priority || 'MEDIUM');
+          setUpdateGroupId(res.data.groupId ? String(res.data.groupId) : '');
+          setUpdateTicketTypeId(res.data.ticketTypeId ? String(res.data.ticketTypeId) : '');
+          setUpdateAgentId(res.data.agentId ? String(res.data.agentId) : '');
+        }
       }
     } catch (err) {
       console.error('Failed to load ticket:', err);
-      setError(err.response?.data?.error?.message || 'Ticket not found or access denied.');
+      if (!isSilent) {
+        setError(err.response?.data?.error?.message || 'Ticket not found or access denied.');
+      }
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -542,6 +546,19 @@ export default function TicketDetails() {
         if (typesRes.success) setTicketTypes(typesRes.data || []);
       });
     }
+
+    // Auto-refresh ticket details every 10s for new comments and status changes
+    const intervalId = setInterval(() => {
+      fetchTicket(true);
+    }, 10000);
+
+    const handleFocus = () => fetchTicket(true);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [id]);
 
   useEffect(() => {

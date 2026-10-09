@@ -205,8 +205,40 @@ export class TicketRepository {
 
   async deleteTicket(id) {
     const numericId = typeof id === 'string' && /^\d+$/.test(id) ? BigInt(id) : id;
-    return prisma.ticket.delete({
-      where: { id: numericId },
+    return prisma.$transaction(async (tx) => {
+      const deleted = await tx.ticket.delete({
+        where: { id: numericId },
+      });
+
+      // Recalculate max ticket number and max id after deletion
+      const stats = await tx.$queryRaw`
+        SELECT 
+          COALESCE(MAX(CAST(ticket_number AS UNSIGNED)), 0) AS maxNum,
+          COALESCE(MAX(id), 0) AS maxId
+        FROM tickets
+      `;
+
+      const maxNum = stats && stats.length > 0 ? Number(stats[0].maxNum) : 0;
+      const maxId = stats && stats.length > 0 ? Number(stats[0].maxId) : 0;
+
+      // Update ticket_sequences with the new highest remaining ticket number
+      await tx.$executeRaw`
+        INSERT INTO ticket_sequences (id, current_number, updated_at) 
+        VALUES (1, ${maxNum}, NOW()) 
+        ON DUPLICATE KEY UPDATE 
+          current_number = ${maxNum}, 
+          updated_at = NOW()
+      `;
+
+      // Reset AUTO_INCREMENT on tickets table
+      const nextAutoInc = Math.max(1, maxId + 1);
+      try {
+        await tx.$executeRawUnsafe(`ALTER TABLE tickets AUTO_INCREMENT = ${nextAutoInc}`);
+      } catch {
+        // Safe fallback if DDL is restricted in active transaction
+      }
+
+      return deleted;
     });
   }
 

@@ -74,6 +74,17 @@ export class TicketService {
       finalContactSource = 'EMPLOYEE_EMAIL_MASTER';
       resolvedContactEmail = employeeEmail.email;
       resolvedContactName = employeeEmail.email.split('@')[0];
+    } else if (contactSource === 'EXTERNAL' || (!contactId && !employeeEmailId && contactEmail)) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const cleanEmail = (contactEmail || '').trim().toLowerCase();
+      if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+        const err = new Error('Please provide a valid contact email address (e.g., requester@gmail.com)');
+        err.statusCode = 400;
+        throw err;
+      }
+      finalContactSource = 'EXTERNAL';
+      resolvedContactEmail = cleanEmail;
+      resolvedContactName = (contactName || '').trim() || cleanEmail.split('@')[0];
     } else {
       if (!contactId) {
         const err = new Error('Contact requester is required');
@@ -461,8 +472,9 @@ export class TicketService {
     // Only the AGENT currently assigned to that ticket can delete the ticket (ticket.agentId === user.id).
     // SUPER_ADMIN and ADMIN retain their delete permissions.
     // EMPLOYEE cannot delete tickets.
-    const isSuperOrAdmin = user.role === 'SUPER_ADMIN' || user.role === 'ADMIN';
-    const isAssignedAgent = user.role === 'AGENT' && ticket.agentId === user.id;
+    const roleName = typeof user.role === 'string' ? user.role : user.role?.name;
+    const isSuperOrAdmin = roleName === 'SUPER_ADMIN' || roleName === 'ADMIN';
+    const isAssignedAgent = roleName === 'AGENT' && ticket.agentId === user.id;
 
     if (!isSuperOrAdmin && !isAssignedAgent) {
       const err = new Error('Forbidden: Only the support agent currently assigned to this ticket can delete it');

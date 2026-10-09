@@ -3,7 +3,7 @@ import { config } from './config/env.js';
 import logger from './utils/logger.js';
 import prisma from './config/database.js';
 
-const PORT = config.port || 5000;
+const PORT = config.port || 7777;
 
 async function startServer() {
   try {
@@ -12,17 +12,24 @@ async function startServer() {
     logger.info('Connected to MySQL database via Prisma successfully.');
 
     const server = app.listen(PORT, '0.0.0.0', () => {
-      logger.info(`KIMS ICT Service Desk backend server running on http://0.0.0.0:${PORT} [${config.nodeEnv}]`);
+      logger.info(
+        `KIMS ICT Service Desk backend server running on http://0.0.0.0:${PORT} [${config.nodeEnv}]`
+      );
     });
 
     // Prevent proxy ECONNRESET by ensuring server keepAlive is longer than reverse proxy timeout
     server.keepAliveTimeout = 65000;
     server.headersTimeout = 66000;
+
   } catch (error) {
-    logger.error('Failed to start backend server:', error);
+    console.error('========== BACKEND STARTUP ERROR ==========');
+    console.error(error);
+    console.error(error?.stack);
+    console.error('===========================================');
+
+    logger.error({ err: error }, 'Failed to start backend server');
     process.exit(1);
   }
 }
 
 startServer();
-

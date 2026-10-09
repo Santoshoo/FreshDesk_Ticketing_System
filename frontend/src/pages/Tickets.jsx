@@ -45,9 +45,9 @@ export default function Tickets() {
   const priority = searchParams.get('priority') || '';
   const page = parseInt(searchParams.get('page') || '1', 10);
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (isSilent = false) => {
     try {
-      setLoading(true);
+      if (!isSilent) setLoading(true);
       const [ticketsRes, sumRes] = await Promise.all([
         ticketApi.list({
           page,
@@ -70,7 +70,7 @@ export default function Tickets() {
     } catch (err) {
       console.error('Failed to load tickets:', err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -82,6 +82,20 @@ export default function Tickets() {
 
   useEffect(() => {
     fetchTickets();
+
+    // Auto-refresh tickets every 10 seconds for live updates
+    const intervalId = setInterval(() => {
+      fetchTickets(true);
+    }, 10000);
+
+    // Auto-refresh when switching back to tab
+    const handleFocus = () => fetchTickets(true);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [search, status, groupId, priority, page, pagination.limit]);
 
   const updateFilter = (key, val) => {

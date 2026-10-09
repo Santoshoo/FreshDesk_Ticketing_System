@@ -18,14 +18,14 @@ if (nodeEnv === 'production') {
 }
 
 export const config = {
-  port: parseInt(process.env.PORT || '5000', 10),
+  port: parseInt(process.env.PORT || '7777', 10),
   nodeEnv,
   databaseUrl: process.env.DATABASE_URL,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'kims_jwt_access_secret_super_secure_key_12345',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'kims_jwt_refresh_secret_super_secure_key_67890',
-    accessExpiry: process.env.JWT_ACCESS_EXPIRY || '1h',
-    refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
+    accessExpiry: process.env.JWT_ACCESS_EXPIRY || '1d',
+    refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '30d',
   },
 
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',

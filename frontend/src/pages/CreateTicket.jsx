@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Search,
@@ -21,6 +21,12 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  Tag,
+  Users,
+  UserCheck,
+  Mail,
+  UserPlus,
+  Plus,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -33,6 +39,172 @@ import ticketTypeApi from '../services/ticketTypeApi.js';
 import groupApi from '../services/groupApi.js';
 import ticketApi from '../services/ticketApi.js';
 import TicketSuccessModal from '../components/modals/TicketSuccessModal.jsx';
+
+// Reusable Searchable Combobox Component for Ticket Type, Group, Agent
+function SearchableCombobox({
+  value,
+  onChange,
+  options = [],
+  placeholder = 'Select...',
+  searchPlaceholder = 'Search...',
+  disabled = false,
+  icon: Icon,
+  getOptionLabel = (opt) => opt?.name || '',
+  getOptionKey = (opt) => opt?.id,
+  emptyMessage = 'No matching options found',
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef(null);
+
+  const selectedOption = options.find((opt) => String(getOptionKey(opt)) === String(value));
+
+  const filteredOptions = useMemo(() => {
+    if (!searchQuery.trim()) return options;
+    const q = searchQuery.toLowerCase().trim();
+    return options.filter((opt) => {
+      const label = String(getOptionLabel(opt) || '').toLowerCase();
+      const email = String(opt?.email || '').toLowerCase();
+      const desc = String(opt?.description || '').toLowerCase();
+      return label.includes(q) || email.includes(q) || desc.includes(q);
+    });
+  }, [options, searchQuery, getOptionLabel]);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      {/* Trigger Button */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setIsOpen(!isOpen);
+          if (!isOpen) setSearchQuery('');
+        }}
+        className={`w-full px-3.5 py-2 text-xs bg-white border rounded-xl flex items-center justify-between text-left transition-all cursor-pointer ${
+          disabled
+            ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-75'
+            : isOpen
+            ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-xs'
+            : 'border-slate-300 hover:border-slate-400'
+        }`}
+      >
+        <div className="flex items-center gap-2 truncate pr-2">
+          {Icon && (
+            <Icon
+              className={`w-3.5 h-3.5 shrink-0 ${
+                selectedOption ? 'text-indigo-600' : 'text-slate-400'
+              }`}
+            />
+          )}
+          {selectedOption ? (
+            <span className="font-semibold text-slate-800 truncate">
+              {getOptionLabel(selectedOption)}
+            </span>
+          ) : (
+            <span className="text-slate-400 font-normal truncate">{placeholder}</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0 ml-1">
+          {selectedOption && !disabled && (
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange('');
+              }}
+              className="p-0.5 text-slate-400 hover:text-rose-600 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Clear selection"
+            >
+              <X className="w-3 h-3" />
+            </span>
+          )}
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${
+              isOpen ? 'rotate-180 text-indigo-600' : ''
+            }`}
+          />
+        </div>
+      </button>
+
+      {/* Popover Dropdown */}
+      {isOpen && !disabled && (
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-in fade-in duration-100">
+          {/* Search Box */}
+          <div className="p-2 border-b border-slate-100 bg-slate-50/80">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                autoFocus
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-800 placeholder:text-slate-400"
+              />
+            </div>
+            {options.length > 4 && (
+              <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1 px-1">
+                <span>{filteredOptions.length} of {options.length} options</span>
+                {searchQuery && <span>Filtered by &ldquo;{searchQuery}&rdquo;</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Options List */}
+          <div className="max-h-52 overflow-y-auto divide-y divide-slate-50 p-1">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-4 text-center text-xs text-slate-400">
+                {emptyMessage}
+              </div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const optKey = getOptionKey(opt);
+                const isSelected = String(optKey) === String(value);
+                const label = getOptionLabel(opt);
+
+                return (
+                  <button
+                    key={optKey}
+                    type="button"
+                    onClick={() => {
+                      onChange(String(optKey));
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-2.5 py-2 text-left text-xs rounded-lg flex items-center justify-between transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-indigo-50/80 text-indigo-700 font-semibold'
+                        : 'text-slate-700 hover:bg-slate-50 font-normal'
+                    }`}
+                  >
+                    <div className="truncate pr-2">
+                      <span className="font-medium text-slate-800">{label}</span>
+                    </div>
+                    {isSelected && (
+                      <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0 ml-1" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CreateTicket() {
   const { user } = useAuth();
@@ -401,30 +573,79 @@ export default function CreateTicket() {
             </div>
 
             {selectedContact ? (
-              <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs">
+              <div className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shrink-0 ${
+                    selectedContact.source === 'EXTERNAL'
+                      ? 'bg-indigo-600 shadow-xs'
+                      : selectedContact.source === 'EMPLOYEE_EMAIL_MASTER'
+                      ? 'bg-teal-600 shadow-xs'
+                      : 'bg-slate-800'
+                  }`}>
                     {selectedContact.name ? selectedContact.name[0].toUpperCase() : 'U'}
                   </div>
                   <div>
-                    <span className="text-xs font-bold text-slate-800">{selectedContact.name}</span>
-                    <span className="text-[11px] text-slate-400 ml-2">({selectedContact.email})</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-bold text-slate-800">{selectedContact.name}</span>
+                      {selectedContact.source === 'EXTERNAL' && (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                          External Email
+                        </span>
+                      )}
+                      {selectedContact.source === 'EMPLOYEE_EMAIL_MASTER' && (
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200/80">
+                          Employee Master
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-slate-500 font-medium">{selectedContact.email}</span>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedContact(null);
+                    setContactSearch('');
+                    setContactResults([]);
+                  }}
+                  className="text-xs font-medium text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-200/60 transition-colors"
+                  title="Remove contact"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             ) : (
               <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Search contact by name or email..."
+                  placeholder="Search contact name, or type any email (e.g. requester@gmail.com)..."
                   value={contactSearch}
                   onChange={(e) => setContactSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const query = contactSearch.trim();
+                      if (query) {
+                        const defaultName = query.includes('@') ? query.split('@')[0] : query;
+                        setSelectedContact({
+                          id: null,
+                          name: defaultName,
+                          email: query.toLowerCase(),
+                          source: 'EXTERNAL',
+                        });
+                        setContactSearch('');
+                        setContactResults([]);
+                      }
+                    }
+                  }}
                   className="w-full pl-9 pr-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
 
-                {contactResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-slate-200 max-h-48 overflow-y-auto z-20 divide-y divide-slate-100">
+                {/* Dropdown Suggestions */}
+                {contactSearch.trim().length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-xl shadow-lg border border-slate-200 max-h-60 overflow-y-auto z-30 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-100">
+                    {/* 1. Database Master Records */}
                     {contactResults.map((u) => (
                       <div
                         key={`${u.source}-${u.id}-${u.email}`}
@@ -433,14 +654,65 @@ export default function CreateTicket() {
                           setContactSearch('');
                           setContactResults([]);
                         }}
-                        className="p-2.5 hover:bg-sky-50/60 cursor-pointer flex items-center justify-between text-xs"
+                        className="p-2.5 hover:bg-indigo-50/50 cursor-pointer flex items-center justify-between text-xs transition-colors"
                       >
-                        <div>
-                          <p className="font-semibold text-slate-800">{u.name}</p>
-                          <p className="text-[11px] text-slate-400">{u.email}</p>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center font-bold text-xs shrink-0 border border-slate-200">
+                            {u.name ? u.name[0].toUpperCase() : 'U'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="font-semibold text-slate-800">{u.name}</p>
+                              {u.source === 'EMPLOYEE_EMAIL_MASTER' && (
+                                <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+                                  Employee Master
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-400">{u.email}</p>
+                          </div>
                         </div>
+                        <Check className="w-3.5 h-3.5 text-slate-300" />
                       </div>
                     ))}
+
+                    {/* 2. Direct Custom / External Email Option */}
+                    <div
+                      onClick={() => {
+                        const raw = contactSearch.trim();
+                        const cleanEmail = raw.toLowerCase();
+                        const defaultName = raw.includes('@') ? raw.split('@')[0] : raw;
+                        setSelectedContact({
+                          id: null,
+                          name: defaultName,
+                          email: cleanEmail,
+                          source: 'EXTERNAL',
+                        });
+                        setContactSearch('');
+                        setContactResults([]);
+                      }}
+                      className="p-3 bg-indigo-50/60 hover:bg-indigo-100/70 cursor-pointer flex items-center justify-between text-xs text-indigo-900 transition-colors border-t border-indigo-100/80"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+                          <Mail className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-indigo-950 truncate max-w-xs">
+                              Use &ldquo;{contactSearch.trim()}&rdquo;
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-200/80 text-indigo-800">
+                              External Requester
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-indigo-600 font-medium">
+                            Use this email as requester (including @gmail.com, etc.)
+                          </p>
+                        </div>
+                      </div>
+                      <Plus className="w-4 h-4 text-indigo-600 shrink-0" />
+                    </div>
                   </div>
                 )}
               </div>
@@ -469,23 +741,16 @@ export default function CreateTicket() {
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Type <span className="text-rose-500">*</span>
               </label>
-              <select
-                required
+              <SearchableCombobox
                 value={ticketTypeId}
-                onChange={(e) => setTicketTypeId(e.target.value)}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
-                  !ticketTypeId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
-                }`}
-              >
-                <option value="" disabled>
-                  Select Type
-                </option>
-                {ticketTypes.map((t) => (
-                  <option key={t.id} value={t.id} className="text-slate-800 font-normal">
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setTicketTypeId(val)}
+                options={ticketTypes}
+                placeholder="Select Type"
+                searchPlaceholder="Search type..."
+                icon={Tag}
+                getOptionLabel={(t) => t.name}
+                emptyMessage="No matching ticket types"
+              />
             </div>
 
             {/* Group */}
@@ -493,23 +758,16 @@ export default function CreateTicket() {
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Group <span className="text-rose-500">*</span>
               </label>
-              <select
-                required
+              <SearchableCombobox
                 value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
-                  !groupId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
-                }`}
-              >
-                <option value="" disabled>
-                  Select Group
-                </option>
-                {availableGroups.map((g) => (
-                  <option key={g.id} value={g.id} className="text-slate-800 font-normal">
-                    {g.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setGroupId(val)}
+                options={availableGroups}
+                placeholder="Select Group"
+                searchPlaceholder="Search group..."
+                icon={Users}
+                getOptionLabel={(g) => g.name}
+                emptyMessage="No matching groups"
+              />
             </div>
 
             {/* Priority */}
@@ -542,28 +800,23 @@ export default function CreateTicket() {
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Assign To <span className="text-rose-500">*</span>
               </label>
-              <select
-                required
+              <SearchableCombobox
                 value={agentId}
-                onChange={(e) => setAgentId(e.target.value)}
-                disabled={!groupId || availableAgents.length === 0}
-                className={`w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-colors ${
-                  !agentId ? 'text-slate-400 font-normal' : 'text-slate-800 font-medium'
-                } ${!groupId || availableAgents.length === 0 ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}
-              >
-                <option value="" disabled>
-                  {!groupId
+                onChange={(val) => setAgentId(val)}
+                options={availableAgents}
+                placeholder={
+                  !groupId
                     ? 'Select Group first'
                     : availableAgents.length === 0
                     ? 'No active agents in this group'
-                    : 'Select Agent'}
-                </option>
-                {availableAgents.map((ag) => (
-                  <option key={ag.id} value={ag.id} className="text-slate-800 font-normal">
-                    {ag.name} ({ag.email})
-                  </option>
-                ))}
-              </select>
+                    : 'Select Agent'
+                }
+                searchPlaceholder="Search agent by name..."
+                disabled={!groupId || availableAgents.length === 0}
+                icon={UserCheck}
+                getOptionLabel={(ag) => ag.name}
+                emptyMessage="No matching agents found"
+              />
               {groupId && availableAgents.length === 0 && (
                 <p className="text-[11px] text-rose-500 mt-1 font-medium">
                   ⚠️ No active agents are assigned to this group. Please assign agents in Agent Groups.

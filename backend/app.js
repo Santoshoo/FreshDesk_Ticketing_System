@@ -1,6 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
 import { config } from './config/env.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
@@ -19,7 +22,12 @@ import contactRoutes from './routes/contactRoutes.js';
 const app = express();
 
 // Security and basic middlewares
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -59,7 +67,30 @@ app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/employee-emails', employeeEmailRoutes);
 app.use('/api/v1/contacts', contactRoutes);
 
-// Fallback for unmatched routes
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Detect dist location: backend/dist or frontend/dist
+const localDistPath = path.resolve(__dirname, './dist');
+const parentDistPath = path.resolve(__dirname, '../frontend/dist');
+const distPath = fs.existsSync(path.join(localDistPath, 'index.html'))
+  ? localDistPath
+  : fs.existsSync(path.join(parentDistPath, 'index.html'))
+  ? parentDistPath
+  : null;
+
+// Serve built frontend assets in production / standalone mode if dist exists
+if (distPath) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path === '/health') {
+      return next();
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+// Fallback for unmatched API routes
 app.use((req, res) => {
   res.status(404).json({
     success: false,

@@ -58,10 +58,15 @@ export class DashboardService {
     let parsedStart = null;
     let parsedEnd = null;
 
-    if (periodType === 'day') {
-      const targetDateStr = date || new Date().toISOString().slice(0, 10);
-      parsedStart = new Date(`${targetDateStr}T00:00:00.000`);
-      parsedEnd = new Date(`${targetDateStr}T23:59:59.999`);
+    if (periodType === 'day' || periodType === 'custom') {
+      if (startDate && endDate) {
+        parsedStart = new Date(`${startDate}T00:00:00.000`);
+        parsedEnd = new Date(`${endDate}T23:59:59.999`);
+      } else {
+        const targetDateStr = date || startDate || new Date().toISOString().slice(0, 10);
+        parsedStart = new Date(`${targetDateStr}T00:00:00.000`);
+        parsedEnd = new Date(`${targetDateStr}T23:59:59.999`);
+      }
     } else if (periodType === 'week') {
       if (startDate && endDate) {
         parsedStart = new Date(`${startDate}T00:00:00.000`);

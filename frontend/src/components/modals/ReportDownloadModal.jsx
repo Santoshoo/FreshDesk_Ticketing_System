@@ -30,7 +30,8 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
   const currentMonth = useMemo(() => new Date().getMonth() + 1, []); // 1-12
 
   // Inputs
-  const [selectedDate, setSelectedDate] = useState(todayStr); // for day-wise
+  const [startDate, setStartDate] = useState(todayStr); // for day-wise range from
+  const [endDate, setEndDate] = useState(todayStr); // for day-wise range to
   const [selectedWeekDate, setSelectedWeekDate] = useState(todayStr); // for week-wise reference
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
@@ -85,13 +86,30 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
 
   // Quick preset handlers
   const handlePresetToday = () => {
-    setSelectedDate(todayStr);
+    setStartDate(todayStr);
+    setEndDate(todayStr);
   };
 
   const handlePresetYesterday = () => {
     const d = new Date();
     d.setDate(d.getDate() - 1);
-    setSelectedDate(d.toISOString().slice(0, 10));
+    const yStr = d.toISOString().slice(0, 10);
+    setStartDate(yStr);
+    setEndDate(yStr);
+  };
+
+  const handlePresetLast7Days = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    setStartDate(d.toISOString().slice(0, 10));
+    setEndDate(todayStr);
+  };
+
+  const handlePresetLast30Days = () => {
+    const d = new Date();
+    d.setDate(d.getDate() - 29);
+    setStartDate(d.toISOString().slice(0, 10));
+    setEndDate(todayStr);
   };
 
   const handlePresetThisWeek = () => {
@@ -125,8 +143,15 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
       return 'All Time (Total History)';
     }
     if (periodType === 'day') {
-      const d = new Date(`${selectedDate}T12:00:00`);
-      return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      if (startDate === endDate) {
+        const d = new Date(`${startDate}T12:00:00`);
+        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      }
+      const s = new Date(`${startDate}T12:00:00`);
+      const e = new Date(`${endDate}T12:00:00`);
+      const sFmt = s.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const eFmt = e.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `${sFmt} — ${eFmt}`;
     }
     if (periodType === 'week') {
       return weekRange.label;
@@ -136,7 +161,7 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
       return `${monthObj ? monthObj.label : ''} ${selectedYear}`;
     }
     return '';
-  }, [periodType, selectedDate, weekRange, selectedMonth, selectedYear]);
+  }, [periodType, startDate, endDate, weekRange, selectedMonth, selectedYear]);
 
   // Execute Download
   const handleDownload = async () => {
@@ -148,7 +173,9 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
       const params = { periodType, status: selectedStatus };
 
       if (periodType === 'day') {
-        params.date = selectedDate;
+        params.startDate = startDate;
+        params.endDate = endDate;
+        params.date = startDate;
       } else if (periodType === 'week') {
         params.startDate = weekRange.startDate;
         params.endDate = weekRange.endDate;
@@ -400,12 +427,12 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* TAB 3: DAY-WISE */}
+          {/* TAB 3: DAY-WISE / DATE RANGE */}
           {periodType === 'day' && (
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-medium text-slate-600">Select Specific Day:</span>
-                <div className="flex items-center gap-1.5">
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-1.5">
+                <span className="text-xs font-medium text-slate-600">Select Date Range:</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     type="button"
                     onClick={handlePresetToday}
@@ -420,14 +447,60 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
                   >
                     Yesterday
                   </button>
+                  <button
+                    type="button"
+                    onClick={handlePresetLast7Days}
+                    className="text-[11px] font-semibold text-slate-600 hover:text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-200 cursor-pointer shadow-2xs"
+                  >
+                    Last 7 Days
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePresetLast30Days}
+                    className="text-[11px] font-semibold text-slate-600 hover:text-slate-800 bg-white px-2 py-0.5 rounded-md border border-slate-200 cursor-pointer shadow-2xs"
+                  >
+                    Last 30 Days
+                  </button>
                 </div>
               </div>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
-              />
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    From Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    max={endDate || todayStr}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setStartDate(val);
+                      if (val && endDate && val > endDate) {
+                        setEndDate(val);
+                      }
+                    }}
+                    className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                    To Date:
+                  </label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEndDate(val);
+                      if (val && startDate && val < startDate) {
+                        setStartDate(val);
+                      }
+                    }}
+                    className="w-full text-xs font-medium bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
