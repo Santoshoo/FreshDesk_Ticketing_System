@@ -62,7 +62,7 @@ export default function Header({ onToggleSidebar }) {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#94a3b8' }} />
           <input
             type="text"
-            placeholder="Search tickets by ID, subject, requester..."
+            placeholder="Search tickets by ID, subject, agent, status..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-20 py-2 text-xs border rounded-full transition-all outline-none"

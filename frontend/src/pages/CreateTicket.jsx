@@ -29,9 +29,8 @@ import {
   Plus,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import UnderlineExt from '@tiptap/extension-underline';
-import LinkExt from '@tiptap/extension-link';
+import { getSharedEditorExtensions } from '../utils/editorExtensions.js';
+import TableToolbarControls from '../components/TableToolbarControls.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import contactApi from '../services/contactApi.js';
@@ -236,16 +235,7 @@ export default function CreateTicket() {
 
   // Tiptap Rich Text Editor Setup
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      UnderlineExt,
-      LinkExt.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-indigo-600 underline hover:text-indigo-800',
-        },
-      }),
-    ],
+    extensions: getSharedEditorExtensions(),
     content: '',
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
@@ -1040,6 +1030,11 @@ export default function CreateTicket() {
 
                 <span className="w-px h-3.5 bg-slate-300 mx-1"></span>
 
+                {/* Table Controls */}
+                <TableToolbarControls editor={editor} />
+
+                <span className="w-px h-3.5 bg-slate-300 mx-1"></span>
+
                 {/* Undo */}
                 <button
                   type="button"
@@ -1068,7 +1063,7 @@ export default function CreateTicket() {
               {/* Tiptap Active Editor Content Area */}
               <div
                 onClick={() => editor?.commands.focus()}
-                className="relative min-h-[140px] p-3.5 text-xs text-slate-800 bg-white cursor-text"
+                className="relative min-h-[140px] p-3.5 text-xs text-slate-800 bg-white cursor-text overflow-x-auto"
               >
                 {editor && editor.isEmpty && (
                   <span className="absolute top-3.5 left-3.5 text-xs text-slate-400 pointer-events-none select-none">

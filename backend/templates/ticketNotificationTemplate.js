@@ -69,6 +69,27 @@ export function generateTicketEmail({
     .ticket-description-content li {
       margin-bottom: 4px;
     }
+    .ticket-description-content table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 10px 0;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .ticket-description-content th,
+    .ticket-description-content td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .ticket-description-content th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .ticket-description-content tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
   </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f4f7fb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">

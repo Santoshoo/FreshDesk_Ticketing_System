@@ -2,26 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search,
-  Download,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Check,
+  Filter,
   Ticket as TicketIcon,
   Plus,
   RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 import ticketApi from '../services/ticketApi.js';
 import groupApi from '../services/groupApi.js';
 import dashboardApi from '../services/dashboardApi.js';
 import { EmptyState } from '../components/ui/index.jsx';
+import TicketCloseModal from '../components/modals/TicketCloseModal.jsx';
+import { canEditTicket } from '../utils/ticketPermissions.js';
 
 export default function Tickets() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [tickets, setTickets] = useState([]);
   const [groups, setGroups] = useState([]);
+  const [activeStatusMenuTicketId, setActiveStatusMenuTicketId] = useState(null);
+  const [closeModalTicket, setCloseModalTicket] = useState(null);
+  const [closeModalTargetStatus, setCloseModalTargetStatus] = useState('RESOLVED');
+  const [closeModalLoading, setCloseModalLoading] = useState(false);
   const [summary, setSummary] = useState({
     total: 0,
     open: 0,
@@ -115,41 +125,70 @@ export default function Tickets() {
     setSearchParams(new URLSearchParams());
   };
 
-  const handleExportCSV = () => {
-    if (!tickets || tickets.length === 0) return;
-    const headers = [
-      'Ticket Number',
-      'Subject',
-      'Requester',
-      'Group',
-      'Priority',
-      'Status',
-      'Assigned To',
-      'Created At',
-    ];
-    const rows = tickets.map((t) => [
-      `#${t.ticketNumber}`,
-      `"${(t.subject || '').replace(/"/g, '""')}"`,
-      `"${t.contact?.name || t.creator?.name || 'Staff User'}"`,
-      `"${t.group?.name || 'General'}"`,
-      t.priority || 'MEDIUM',
-      t.status,
-      `"${t.agent?.name || 'Unassigned'}"`,
-      new Date(t.createdAt).toLocaleDateString(),
-    ]);
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute(
-      'download',
-      `Tickets_Export_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const formatStatusName = (s) => {
+    switch (s) {
+      case 'IN_PROGRESS': return 'In Progress';
+      case 'ON_HOLD': return 'On Hold';
+      case 'RESOLVED': return 'Resolved';
+      case 'CLOSED': return 'Closed';
+      case 'PENDING': return 'Pending';
+      case 'OPEN':
+      default: return 'Open';
+    }
+  };
+
+  const handleQuickStatusChange = async (ticket, newStatus) => {
+    try {
+      setActiveStatusMenuTicketId(null);
+      const res = await ticketApi.updateStatus(ticket.id, newStatus);
+      if (res.success) {
+        setTickets((prev) =>
+          prev.map((item) => (item.id === ticket.id ? { ...item, status: newStatus } : item))
+        );
+        showToast(
+          `Ticket #${ticket.ticketNumber} status changed to ${formatStatusName(newStatus)}`,
+          'success'
+        );
+        dashboardApi.getSummary().then((sumRes) => {
+          if (sumRes.success) setSummary(sumRes.data || {});
+        });
+      }
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || 'Failed to update status', 'error');
+    }
+  };
+
+  const handleCloseModalConfirm = async (remark) => {
+    if (!closeModalTicket) return;
+    try {
+      setCloseModalLoading(true);
+      if (remark) {
+        await ticketApi.addComment(closeModalTicket.id, {
+          commentType: closeModalTargetStatus === 'RESOLVED' ? 'REPLY' : 'INTERNAL_NOTE',
+          body: `[${closeModalTargetStatus === 'RESOLVED' ? 'Resolution Summary' : 'Closure Note'}]: ${remark}`,
+        });
+      }
+      const res = await ticketApi.updateStatus(closeModalTicket.id, closeModalTargetStatus);
+      if (res.success) {
+        setTickets((prev) =>
+          prev.map((item) =>
+            item.id === closeModalTicket.id ? { ...item, status: closeModalTargetStatus } : item
+          )
+        );
+        showToast(
+          `Ticket #${closeModalTicket.ticketNumber} marked as ${closeModalTargetStatus.toLowerCase()} successfully!`,
+          'success'
+        );
+        dashboardApi.getSummary().then((sumRes) => {
+          if (sumRes.success) setSummary(sumRes.data || {});
+        });
+      }
+      setCloseModalTicket(null);
+    } catch (err) {
+      showToast(err.response?.data?.error?.message || 'Failed to update ticket status', 'error');
+    } finally {
+      setCloseModalLoading(false);
+    }
   };
 
   const totalCount = summary.total || pagination.total || 0;
@@ -314,7 +353,7 @@ export default function Tickets() {
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search tickets by subject or #ID..."
+                placeholder="Search tickets by ID, subject, agent, status..."
                 value={search}
                 onChange={(e) => updateFilter('search', e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors"
@@ -323,6 +362,19 @@ export default function Tickets() {
           </div>
 
           <div className="flex items-center gap-2">
+            <select
+              value={status}
+              onChange={(e) => updateFilter('status', e.target.value)}
+              className="px-2.5 py-1.5 text-xs bg-white border border-slate-200 rounded-lg text-slate-700 font-medium focus:outline-none focus:border-blue-500"
+            >
+              <option value="">Status: All</option>
+              <option value="OPEN">Open</option>
+              <option value="PENDING">Pending</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="CLOSED">Closed</option>
+            </select>
+
             <select
               value={groupId}
               onChange={(e) => updateFilter('groupId', e.target.value)}
@@ -365,14 +417,6 @@ export default function Tickets() {
               className="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 transition-all cursor-pointer"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-600' : ''}`} />
-            </button>
-
-            <button
-              onClick={handleExportCSV}
-              title="Export CSV"
-              className="p-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-600 transition-all cursor-pointer"
-            >
-              <Download className="w-3.5 h-3.5 text-slate-600" />
             </button>
           </div>
         </div>
@@ -495,13 +539,105 @@ export default function Tickets() {
                         </span>
                       </td>
 
-                      {/* Status Badge */}
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`inline-flex items-center px-3 py-0.5 rounded-full text-[11px] font-bold ${statusConfig.badgeClass}`}
-                        >
-                          {statusConfig.label}
-                        </span>
+                      {/* Status Badge & Inline Action Menu */}
+                      <td className="px-5 py-3.5 relative" onClick={(e) => e.stopPropagation()}>
+                        <div className="relative inline-block">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (canEditTicket(user, t)) {
+                                setActiveStatusMenuTicketId(
+                                  activeStatusMenuTicketId === t.id ? null : t.id
+                                );
+                              } else {
+                                updateFilter('status', t.status);
+                              }
+                            }}
+                            title={
+                              canEditTicket(user, t)
+                                ? `Click to change status (current: ${statusConfig.label})`
+                                : `Click to filter by ${statusConfig.label}`
+                            }
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer select-none ${statusConfig.badgeClass} ${
+                              canEditTicket(user, t)
+                                ? 'hover:shadow-sm hover:scale-105 active:scale-95'
+                                : 'hover:opacity-80'
+                            }`}
+                          >
+                            <span>{statusConfig.label}</span>
+                            {canEditTicket(user, t) && (
+                              <ChevronDown className="w-2.5 h-2.5 opacity-60 ml-0.5" />
+                            )}
+                          </button>
+
+                          {/* Quick Status Dropdown for authorized staff */}
+                          {activeStatusMenuTicketId === t.id && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveStatusMenuTicketId(null);
+                                }}
+                              />
+                              <div
+                                className="absolute left-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="px-3 py-1 text-[10px] uppercase tracking-wider font-extrabold text-slate-400 border-b border-slate-100 mb-1">
+                                  Update Status
+                                </div>
+                                {[
+                                  { value: 'OPEN', label: 'Open', style: 'text-blue-700 hover:bg-blue-50' },
+                                  { value: 'IN_PROGRESS', label: 'In Progress', style: 'text-purple-700 hover:bg-purple-50' },
+                                  { value: 'PENDING', label: 'Pending', style: 'text-rose-700 hover:bg-rose-50' },
+                                  { value: 'RESOLVED', label: 'Resolved', style: 'text-orange-700 hover:bg-orange-50' },
+                                  { value: 'CLOSED', label: 'Closed', style: 'text-emerald-700 hover:bg-emerald-50' },
+                                ].map((stOption) => {
+                                  const isCurrent = t.status === stOption.value;
+                                  return (
+                                    <button
+                                      key={stOption.value}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setActiveStatusMenuTicketId(null);
+                                        if (isCurrent) return;
+                                        if (stOption.value === 'CLOSED' || stOption.value === 'RESOLVED') {
+                                          setCloseModalTargetStatus(stOption.value);
+                                          setCloseModalTicket(t);
+                                        } else {
+                                          handleQuickStatusChange(t, stOption.value);
+                                        }
+                                      }}
+                                      className={`w-full text-left px-3 py-1.5 text-xs font-semibold flex items-center justify-between cursor-pointer transition-colors ${stOption.style} ${
+                                        isCurrent ? 'font-bold bg-slate-50' : ''
+                                      }`}
+                                    >
+                                      <span>{stOption.label}</span>
+                                      {isCurrent && <Check className="w-3.5 h-3.5 stroke-[2.5]" />}
+                                    </button>
+                                  );
+                                })}
+
+                                <div className="border-t border-slate-100 my-1"></div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveStatusMenuTicketId(null);
+                                    updateFilter('status', t.status);
+                                  }}
+                                  className="w-full text-left px-3 py-1 text-[11px] font-medium text-slate-500 hover:text-blue-600 hover:bg-blue-50/50 flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  <Filter className="w-3 h-3" />
+                                  <span>Filter list by {statusConfig.label}</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </td>
 
                       {/* Agent with Avatar */}
@@ -619,6 +755,16 @@ export default function Tickets() {
           </div>
         )}
       </div>
+
+      {/* Quick Close / Resolve Modal from table inline status change */}
+      <TicketCloseModal
+        isOpen={Boolean(closeModalTicket)}
+        targetStatus={closeModalTargetStatus}
+        ticket={closeModalTicket}
+        loading={closeModalLoading}
+        onClose={() => setCloseModalTicket(null)}
+        onConfirm={handleCloseModalConfirm}
+      />
     </div>
   );
 }

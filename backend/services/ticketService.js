@@ -234,6 +234,10 @@ export class TicketService {
           { ticketNumber: { contains: cleanSearch } },
         ];
       } else {
+        const upper = cleanSearch.toUpperCase().replace(/\s+/g, '_');
+        const validStatuses = ['OPEN', 'PENDING', 'IN_PROGRESS', 'RESOLVED', 'CLOSED', 'ON_HOLD'];
+        const statusMatch = validStatuses.includes(upper) ? [{ status: upper }] : [];
+
         where.OR = [
           { ticketNumber: { contains: cleanSearch } },
           { subject: { contains: cleanSearch } },
@@ -244,6 +248,13 @@ export class TicketService {
           { contact: { employeeId: { contains: cleanSearch } } },
           { employeeEmail: { email: { contains: cleanSearch } } },
           { employeeEmail: { normalizedEmail: { contains: cleanSearch } } },
+          { agent: { name: { contains: cleanSearch } } },
+          { agent: { email: { contains: cleanSearch } } },
+          { agent: { employeeId: { contains: cleanSearch } } },
+          { group: { name: { contains: cleanSearch } } },
+          { ticketType: { name: { contains: cleanSearch } } },
+          { creator: { name: { contains: cleanSearch } } },
+          ...statusMatch,
         ];
       }
     }
@@ -264,7 +275,20 @@ export class TicketService {
       where.agentId = parseInt(agentId, 10);
     }
 
-    if (scope === 'my') {
+    if (scope === 'created') {
+      const createdOr = [
+        { createdBy: user.id },
+        { contactId: user.id },
+      ];
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: createdOr }];
+        delete where.OR;
+      } else {
+        where.OR = createdOr;
+      }
+    } else if (scope === 'assigned') {
+      where.agentId = user.id;
+    } else if (scope === 'my') {
       const scopeOr = [
         { contactId: user.id },
         { agentId: user.id },
@@ -305,6 +329,21 @@ export class TicketService {
         totalPages: Math.ceil(total / take) || 1,
       },
     };
+  }
+
+  async getMyCounts(user) {
+    const [created, assigned] = await Promise.all([
+      ticketRepository.count({
+        OR: [
+          { createdBy: user.id },
+          { contactId: user.id },
+        ],
+      }),
+      ticketRepository.count({
+        agentId: user.id,
+      }),
+    ]);
+    return { created, assigned };
   }
 
   async getTicketById(user, id) {

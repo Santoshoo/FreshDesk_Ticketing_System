@@ -114,6 +114,7 @@ export function exportReportData({
   data,
   format = 'xlsx',
   periodLabel = 'Report',
+  scopeLabel = '',
   filenamePrefix = 'KIMS_Report',
 }) {
   if (!data) return;
@@ -301,9 +302,11 @@ export function exportReportData({
   const activeGroups = groupReport.filter((g) => g.total > 0);
   const activeAgents = agentReport.filter((a) => a.total > 0);
 
+  const resolvedScope = scopeLabel || data?.metadata?.scopeLabel || 'All Employees & Agents';
   const summarySheetData = [
     ['KIMS ICT SERVICE DESK - PERFORMANCE REPORT'],
     ['Report Period:', periodLabel],
+    ['Report Scope:', resolvedScope],
     ['Generated On:', now.toLocaleString()],
     [''],
     ['1. OVERALL STATUS SUMMARY'],
@@ -436,7 +439,7 @@ export function exportReportData({
       rowHeights.push({ hpt: 30 });
       const cellRef = XLSX.utils.encode_cell({ r, c: 0 });
       if (wsSummary[cellRef]) wsSummary[cellRef].s = titleStyle;
-    } else if (firstCell === 'Report Period:' || firstCell === 'Generated On:') {
+    } else if (firstCell === 'Report Period:' || firstCell === 'Report Scope:' || firstCell === 'Generated On:') {
       rowHeights.push({ hpt: 20 });
       const labelRef = XLSX.utils.encode_cell({ r, c: 0 });
       const valRef = XLSX.utils.encode_cell({ r, c: 1 });

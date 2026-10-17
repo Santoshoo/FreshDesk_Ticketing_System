@@ -38,20 +38,24 @@ export class TicketController {
 
   async listMy(req, res, next) {
     try {
-      const { page, limit, search, status, priority, groupId } = req.query;
-      const result = await ticketService.listTickets(req.user, {
-        page,
-        limit,
-        search,
-        status,
-        priority,
-        groupId,
-        scope: 'my',
-      });
+      const { page, limit, search, status, priority, groupId, scope = 'created' } = req.query;
+      const [result, counts] = await Promise.all([
+        ticketService.listTickets(req.user, {
+          page,
+          limit,
+          search,
+          status,
+          priority,
+          groupId,
+          scope,
+        }),
+        ticketService.getMyCounts(req.user),
+      ]);
       res.json({
         success: true,
         data: result.tickets,
         pagination: result.pagination,
+        counts,
       });
     } catch (error) {
       next(error);

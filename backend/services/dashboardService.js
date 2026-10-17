@@ -1,4 +1,5 @@
 import dashboardRepository from '../repositories/dashboardRepository.js';
+import { prisma } from '../config/database.js';
 
 export class DashboardService {
   _buildFilter(user, scope = 'global') {
@@ -12,6 +13,94 @@ export class DashboardService {
       };
     }
     return {};
+  }
+
+  async _buildReportFilter(user, scope = 'all', agentId = null) {
+    const isAgent = user.role === 'AGENT';
+    const isEmployee = user.role === 'EMPLOYEE';
+
+    // 1. Hard enforcement for AGENT role:
+    // Agents CANNOT download other employees' or agents' reports.
+    // They are strictly limited to tickets assigned to them or created by them.
+    if (isAgent) {
+      return {
+        filter: {
+          OR: [
+            { agentId: user.id },
+            { createdBy: user.id },
+          ],
+        },
+        scopeType: 'AGENT_SELF',
+        scopeLabel: `My Agent Records (${user.name})`,
+      };
+    }
+
+    // 2. Hard enforcement for EMPLOYEE role:
+    if (isEmployee) {
+      return {
+        filter: {
+          OR: [
+            { contactId: user.id },
+            { createdBy: user.id },
+          ],
+        },
+        scopeType: 'EMPLOYEE_SELF',
+        scopeLabel: `My Records (${user.name})`,
+      };
+    }
+
+    // 3. ADMIN & SUPER_ADMIN flexibility:
+    // a) 'my': Only their own records
+    if (scope === 'my') {
+      return {
+        filter: {
+          OR: [
+            { contactId: user.id },
+            { agentId: user.id },
+            { createdBy: user.id },
+          ],
+        },
+        scopeType: 'MY_RECORDS',
+        scopeLabel: `My Records Only (${user.name})`,
+      };
+    }
+
+    // b) 'agent': Specific Agent / Staff
+    if ((scope === 'agent' || scope === 'specific') && agentId) {
+      const parsedAgentId = parseInt(agentId, 10);
+      let agentLabel = `Agent #${parsedAgentId}`;
+      if (!isNaN(parsedAgentId)) {
+        try {
+          const targetAgent = await prisma.user.findUnique({
+            where: { id: parsedAgentId },
+            select: { name: true, employeeId: true },
+          });
+          if (targetAgent) {
+            agentLabel = `${targetAgent.name} (${targetAgent.employeeId})`;
+          }
+        } catch {
+          // ignore lookup failure
+        }
+      }
+
+      return {
+        filter: {
+          OR: [
+            { agentId: parsedAgentId },
+            { createdBy: parsedAgentId },
+          ],
+        },
+        scopeType: 'SPECIFIC_AGENT',
+        scopeLabel: `Agent: ${agentLabel}`,
+      };
+    }
+
+    // c) 'all' / default: All Employees & Agents (Full system view)
+    return {
+      filter: {},
+      scopeType: 'ALL',
+      scopeLabel: 'All Employees & Agents (Entire Organization)',
+    };
   }
 
   async getSummary(user, scope) {
@@ -44,8 +133,9 @@ export class DashboardService {
     return dashboardRepository.getAgentReport(where);
   }
 
-  async getReportExport(user, { periodType = 'month', date, year, month, startDate, endDate, scope, status } = {}) {
-    const where = this._buildFilter(user, scope);
+  async getReportExport(user, { periodType = 'month', date, year, month, startDate, endDate, scope = 'all', agentId = null, status } = {}) {
+    const { filter: userFilter, scopeType, scopeLabel } = await this._buildReportFilter(user, scope, agentId);
+    const where = { ...userFilter };
 
     if (status && status !== 'ALL') {
       if (status === 'PENDING') {
@@ -100,6 +190,9 @@ export class DashboardService {
         startDate: parsedStart ? parsedStart.toISOString() : null,
         endDate: parsedEnd ? parsedEnd.toISOString() : null,
         totalTickets: data.tickets.length,
+        scope: scopeType,
+        scopeLabel,
+        userRole: user.role,
       },
     };
   }

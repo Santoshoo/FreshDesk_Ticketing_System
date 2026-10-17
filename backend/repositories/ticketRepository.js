@@ -325,6 +325,9 @@ export class TicketRepository {
         OR: [
           { ticketNumber: { contains: clean } },
           { subject: { contains: clean } },
+          { agent: { name: { contains: clean } } },
+          { contact: { name: { contains: clean } } },
+          { group: { name: { contains: clean } } },
         ],
       };
     }

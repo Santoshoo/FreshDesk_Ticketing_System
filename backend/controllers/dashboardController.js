@@ -63,7 +63,7 @@ export class DashboardController {
 
   async getReportExport(req, res, next) {
     try {
-      const { periodType, date, year, month, startDate, endDate, scope, status } = req.query;
+      const { periodType, date, year, month, startDate, endDate, scope, agentId, status } = req.query;
       const data = await dashboardService.getReportExport(req.user, {
         periodType,
         date,
@@ -72,6 +72,7 @@ export class DashboardController {
         startDate,
         endDate,
         scope,
+        agentId,
         status,
       });
       res.json({ success: true, data });

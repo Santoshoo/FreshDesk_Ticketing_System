@@ -41,6 +41,10 @@ export default function MyTickets() {
         setTickets(res.data || []);
         if (res.pagination) {
           setPagination(res.pagination);
+        }
+        if (res.counts) {
+          setCounts(res.counts);
+        } else if (res.pagination) {
           setCounts((prev) => ({
             ...prev,
             [activeTab]: res.pagination.total,
@@ -70,11 +74,11 @@ export default function MyTickets() {
             setActiveTab('created');
             setPage(1);
           }}
-          className={`pb-2.5 transition-colors relative ${
+          className={`pb-2.5 transition-colors relative cursor-pointer ${
             activeTab === 'created' ? 'text-[#6366f1] font-bold' : 'hover:text-slate-800'
           }`}
         >
-          Created by Me ({counts.created || pagination.total})
+          Created by Me ({counts.created ?? 0})
           {activeTab === 'created' && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#6366f1] rounded-full"></span>
           )}
@@ -85,11 +89,11 @@ export default function MyTickets() {
             setActiveTab('assigned');
             setPage(1);
           }}
-          className={`pb-2.5 transition-colors relative ${
+          className={`pb-2.5 transition-colors relative cursor-pointer ${
             activeTab === 'assigned' ? 'text-[#6366f1] font-bold' : 'hover:text-slate-800'
           }`}
         >
-          Assigned to Me ({counts.assigned || 0})
+          Assigned to Me ({counts.assigned ?? 0})
           {activeTab === 'assigned' && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#6366f1] rounded-full"></span>
           )}

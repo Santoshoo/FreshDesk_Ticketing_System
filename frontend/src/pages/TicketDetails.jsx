@@ -25,9 +25,8 @@ import {
   Lock,
 } from 'lucide-react';
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import UnderlineExt from '@tiptap/extension-underline';
-import LinkExt from '@tiptap/extension-link';
+import { getSharedEditorExtensions } from '../utils/editorExtensions.js';
+import TableToolbarControls from '../components/TableToolbarControls.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import ticketApi from '../services/ticketApi.js';
@@ -41,16 +40,7 @@ function DescriptionEditor({ initialContent, onChange }) {
   const [formatDropdownOpen, setFormatDropdownOpen] = useState(false);
 
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      UnderlineExt,
-      LinkExt.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-indigo-600 underline hover:text-indigo-800',
-        },
-      }),
-    ],
+    extensions: getSharedEditorExtensions(),
     content: initialContent || '',
     onUpdate: ({ editor }) => {
       const html = editor.isEmpty ? '' : editor.getHTML();
@@ -197,15 +187,321 @@ function DescriptionEditor({ initialContent, onChange }) {
         >
           <List className="w-3.5 h-3.5" />
         </button>
+
+        <span className="w-px h-3.5 bg-slate-300 mx-1"></span>
+
+        {/* Table Controls */}
+        <TableToolbarControls editor={editor} />
       </div>
 
       {/* Visual Editor Content Area */}
       <div
         onClick={() => editor?.commands.focus()}
-        className="min-h-[140px] max-h-[240px] overflow-y-auto p-3.5 text-xs text-slate-800 bg-white cursor-text leading-relaxed prose prose-sm max-w-none focus:outline-none"
+        className="min-h-[140px] max-h-[240px] overflow-y-auto overflow-x-auto p-3.5 text-xs text-slate-800 bg-white cursor-text leading-relaxed prose prose-sm max-w-none focus:outline-none"
       >
         <EditorContent editor={editor} />
       </div>
+    </div>
+  );
+}
+
+function ReplyComposer({
+  ticket,
+  composerMode,
+  setComposerMode,
+  onSubmitReply,
+  submitting,
+}) {
+  const fileInputRef = React.useRef(null);
+  const [attachments, setAttachments] = useState([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const editor = useEditor({
+    extensions: getSharedEditorExtensions(),
+    content: '',
+  });
+
+  const handleToggleLink = () => {
+    if (!editor) return;
+    if (editor.isActive('link')) {
+      const shouldUnlink = window.confirm('Do you want to remove the current link? (Click Cancel to change the URL)');
+      if (shouldUnlink) {
+        editor.chain().focus().unsetLink().run();
+        return;
+      }
+    }
+    const previousUrl = editor.getAttributes('link').href || '';
+    const url = window.prompt('Enter link URL (e.g. https://example.com):', previousUrl || 'https://');
+    if (url === null) return;
+    if (url.trim() === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+    const cleanUrl = url.trim().startsWith('http://') || url.trim().startsWith('https://') || url.trim().startsWith('mailto:')
+      ? url.trim()
+      : `https://${url.trim()}`;
+
+    const { from, to } = editor.state.selection;
+    if (from === to) {
+      editor.chain().focus().insertContent(`<a href="${cleanUrl}">${cleanUrl}</a> `).run();
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: cleanUrl }).run();
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const newFiles = files.map((f) => ({
+      id: Math.random().toString(36).substring(7),
+      name: f.name,
+      size:
+        f.size > 1024 * 1024
+          ? (f.size / (1024 * 1024)).toFixed(1) + ' MB'
+          : Math.max(1, Math.round(f.size / 1024)) + ' KB',
+      type: f.type,
+      file: f,
+    }));
+    setAttachments((prev) => [...prev, ...newFiles]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (id) => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
+  };
+
+  const handleInsertEmoji = (emoji) => {
+    if (editor) {
+      editor.chain().focus().insertContent(emoji).run();
+    }
+    setShowEmojiPicker(false);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!editor || (editor.isEmpty && attachments.length === 0)) return;
+
+    const htmlContent = editor.isEmpty ? '' : editor.getHTML();
+    onSubmitReply(htmlContent, attachments, () => {
+      editor.commands.clearContent();
+      setAttachments([]);
+    });
+  };
+
+  const emojis = ['👍', '👎', '😊', '🙌', '✔️', '❓', '💡', '⚠️', '📋', '💬', '❤️', '🎉', '🤝', '🚀'];
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 space-y-3">
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        multiple
+        className="hidden"
+      />
+
+      {/* Formatting Toolbar */}
+      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <div className="flex items-center gap-1 text-slate-500">
+          {/* Bold */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor?.chain().focus().toggleBold().run()}
+            className={`p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+              editor?.isActive('bold')
+                ? 'bg-slate-200 text-slate-900 font-bold shadow-2xs'
+                : 'hover:bg-slate-100 text-slate-700'
+            }`}
+            title="Bold (Ctrl+B)"
+          >
+            <Bold className="w-3.5 h-3.5 stroke-[2.5]" />
+          </button>
+
+          {/* Italic */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            className={`p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+              editor?.isActive('italic')
+                ? 'bg-slate-200 text-slate-900 font-bold shadow-2xs'
+                : 'hover:bg-slate-100 text-slate-700'
+            }`}
+            title="Italic (Ctrl+I)"
+          >
+            <Italic className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Bullet List */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => editor?.chain().focus().toggleBulletList().run()}
+            className={`p-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+              editor?.isActive('bulletList')
+                ? 'bg-slate-200 text-slate-900 font-bold shadow-2xs'
+                : 'hover:bg-slate-100 text-slate-700'
+            }`}
+            title="Bullet List"
+          >
+            <List className="w-3.5 h-3.5" />
+          </button>
+
+          <span className="w-px h-3.5 bg-slate-200 mx-0.5"></span>
+
+          {/* Table Controls */}
+          <TableToolbarControls editor={editor} compact />
+        </div>
+
+        {/* Mode Selector: Reply vs Internal Note */}
+        <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setComposerMode('REPLY')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              composerMode === 'REPLY'
+                ? 'bg-white text-slate-900 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Reply
+          </button>
+          <button
+            type="button"
+            onClick={() => setComposerMode('INTERNAL_NOTE')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              composerMode === 'INTERNAL_NOTE'
+                ? 'bg-amber-500 text-white shadow-2xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Internal Note
+          </button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        {/* Visual Editor Content Area */}
+        <div
+          onClick={() => editor?.commands.focus()}
+          className="relative min-h-[85px] max-h-[220px] overflow-y-auto overflow-x-auto text-xs text-slate-800 cursor-text p-1 leading-relaxed focus:outline-none"
+        >
+          {editor && editor.isEmpty && (
+            <span className="absolute top-1 left-1 text-xs text-slate-400 pointer-events-none select-none">
+              {composerMode === 'INTERNAL_NOTE'
+                ? 'Write an internal note (only visible to staff & agents)...'
+                : 'Type a reply to the requester...'}
+            </span>
+          )}
+          <EditorContent editor={editor} />
+        </div>
+
+        {/* Uploaded Attachments Chips Area */}
+        {attachments.length > 0 && (
+          <div className="pt-2.5 pb-1 flex flex-wrap gap-2 border-t border-slate-100 animate-in fade-in duration-150">
+            {attachments.map((file) => (
+              <div
+                key={file.id}
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs text-slate-700 shadow-2xs transition-colors group"
+              >
+                <Paperclip className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span className="font-semibold max-w-[150px] truncate" title={file.name}>
+                  {file.name}
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">({file.size})</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(file.id)}
+                  className="p-0.5 rounded-full hover:bg-slate-200 text-slate-400 hover:text-rose-600 transition-colors ml-0.5 cursor-pointer"
+                  title="Remove attachment"
+                >
+                  <X className="w-3 h-3 stroke-[2.5]" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Bottom Toolbar: Paperclip, Link, Emoji, Submit Button */}
+        <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 relative">
+          <div className="flex items-center gap-1.5 text-slate-400 relative">
+            {/* Paperclip / Attach File */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="p-1.5 hover:text-slate-700 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
+              title="Attach files (images, docs, pdfs)"
+            >
+              <Paperclip className="w-4 h-4" />
+            </button>
+
+            {/* Link */}
+            <button
+              type="button"
+              onClick={handleToggleLink}
+              className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                editor?.isActive('link')
+                  ? 'text-indigo-600 bg-indigo-50 font-bold'
+                  : 'hover:text-slate-700 hover:bg-slate-100'
+              }`}
+              title="Insert or edit link"
+            >
+              <Link2 className="w-4 h-4" />
+            </button>
+
+            {/* Emoji */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className={`p-1.5 rounded-lg cursor-pointer transition-colors ${
+                  showEmojiPicker
+                    ? 'text-amber-600 bg-amber-50 font-bold'
+                    : 'hover:text-slate-700 hover:bg-slate-100'
+                }`}
+                title="Add emoji"
+              >
+                <Smile className="w-4 h-4" />
+              </button>
+
+              {/* Emoji Picker Popover */}
+              {showEmojiPicker && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowEmojiPicker(false)}
+                  />
+                  <div className="absolute left-0 bottom-full mb-2 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 p-2 grid grid-cols-7 gap-1.5 animate-in fade-in zoom-in-95 duration-150 w-64">
+                    {emojis.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => handleInsertEmoji(emoji)}
+                        className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center text-base cursor-pointer transition-transform hover:scale-125"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting || (!editor || (editor.isEmpty && attachments.length === 0))}
+            className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-40 cursor-pointer text-white hover:opacity-95 active:scale-95"
+            style={{
+              background: composerMode === 'INTERNAL_NOTE' ? '#d97706' : '#1e1b4b',
+            }}
+          >
+            <span>{composerMode === 'INTERNAL_NOTE' ? 'Add Note' : 'Add Reply'}</span>
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -484,7 +780,6 @@ export default function TicketDetails() {
 
   // Comment & Composer State
   const [composerMode, setComposerMode] = useState('REPLY'); // 'REPLY' | 'INTERNAL_NOTE'
-  const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
 
   // Update Ticket Properties Modal State
@@ -610,19 +905,47 @@ export default function TicketDetails() {
     }
   };
 
-  const handleSendReply = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim()) return;
+  const handleSendReply = async (htmlContent, newAttachments = [], resetCallback) => {
+    if (!htmlContent && newAttachments.length === 0) return;
 
     try {
       setSubmittingComment(true);
+
+      // Build formatted comment body with attached files badge if any
+      let finalBody = htmlContent || '<p>Attached file(s)</p>';
+      if (newAttachments.length > 0) {
+        const attachmentHtml = `
+          <div class="comment-attachments mt-2.5 pt-2 border-t border-slate-200 flex flex-wrap gap-2">
+            ${newAttachments
+              .map(
+                (a) => `
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 text-slate-800 rounded-lg text-[11px] font-semibold border border-slate-200">
+                📎 <strong>${a.name}</strong> <span class="text-slate-500 font-mono">(${a.size})</span>
+              </span>`
+              )
+              .join('')}
+          </div>
+        `;
+        finalBody = finalBody + attachmentHtml;
+      }
+
       const res = await ticketApi.addComment(id, {
         commentType: composerMode,
-        body: commentText.trim(),
+        body: finalBody.trim(),
       });
 
       if (res.success) {
-        setCommentText('');
+        // Also update ticket attachments if user can edit ticket
+        if (newAttachments.length > 0 && canEditTicket(user, ticket)) {
+          const currentAttachments = Array.isArray(ticket.attachments) ? ticket.attachments : [];
+          const updatedAttachments = [
+            ...currentAttachments,
+            ...newAttachments.map((a) => ({ name: a.name, size: a.size, type: a.type })),
+          ];
+          ticketApi.update(id, { attachments: updatedAttachments }).catch(() => {});
+        }
+
+        if (resetCallback) resetCallback();
         showToast(
           composerMode === 'INTERNAL_NOTE'
             ? 'Internal note added successfully!'
@@ -881,7 +1204,7 @@ export default function TicketDetails() {
 
             {ticket.description && /<[a-z][\s\S]*>/i.test(ticket.description) ? (
               <div
-                className="text-xs text-slate-700 leading-relaxed pt-1 space-y-1.5 [&_p]:mb-1.5 [&_strong]:font-bold [&_em]:italic [&_u]:underline [&_s]:line-through [&_code]:bg-slate-100 [&_code]:text-indigo-600 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-indigo-600 [&_a]:underline [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-bold"
+                className="rich-text-content overflow-x-auto text-xs text-slate-700 leading-relaxed pt-1 space-y-1.5 [&_p]:mb-1.5 [&_strong]:font-bold [&_em]:italic [&_u]:underline [&_s]:line-through [&_code]:bg-slate-100 [&_code]:text-indigo-600 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-indigo-600 [&_a]:underline [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-bold"
                 dangerouslySetInnerHTML={{ __html: ticket.description }}
               />
             ) : (
@@ -960,7 +1283,7 @@ export default function TicketDetails() {
 
                 {c.body && /<[a-z][\s\S]*>/i.test(c.body) ? (
                   <div
-                    className="text-xs text-slate-700 leading-relaxed pt-1 space-y-1.5 [&_p]:mb-1.5 [&_strong]:font-bold [&_em]:italic [&_u]:underline [&_s]:line-through [&_code]:bg-slate-100 [&_code]:text-indigo-600 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-indigo-600 [&_a]:underline [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-bold"
+                    className="rich-text-content overflow-x-auto text-xs text-slate-700 leading-relaxed pt-1 space-y-1.5 [&_p]:mb-1.5 [&_strong]:font-bold [&_em]:italic [&_u]:underline [&_s]:line-through [&_code]:bg-slate-100 [&_code]:text-indigo-600 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_a]:text-indigo-600 [&_a]:underline [&_h1]:text-base [&_h1]:font-bold [&_h2]:text-sm [&_h2]:font-bold [&_h3]:text-xs [&_h3]:font-bold"
                     dangerouslySetInnerHTML={{ __html: c.body }}
                   />
                 ) : (
@@ -984,102 +1307,13 @@ export default function TicketDetails() {
               </p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs p-4 space-y-3">
-              {/* Formatting Toolbar */}
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <div className="flex items-center gap-1 text-slate-500">
-                  <button
-                    type="button"
-                    onClick={() => setCommentText((prev) => prev + '**bold**')}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 font-bold text-xs cursor-pointer"
-                    title="Bold"
-                  >
-                    <Bold className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCommentText((prev) => prev + '*italic*')}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 italic text-xs cursor-pointer"
-                    title="Italic"
-                  >
-                    <Italic className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCommentText((prev) => prev + '\n- ')}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-700 text-xs cursor-pointer"
-                    title="Bullet List"
-                  >
-                    <List className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Mode Selector: Reply vs Internal Note */}
-                <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setComposerMode('REPLY')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      composerMode === 'REPLY'
-                        ? 'bg-white text-slate-900 shadow-2xs'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    Reply
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setComposerMode('INTERNAL_NOTE')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      composerMode === 'INTERNAL_NOTE'
-                        ? 'bg-amber-500 text-white shadow-2xs'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    Internal Note
-                  </button>
-                </div>
-              </div>
-
-              <form onSubmit={handleSendReply}>
-                <textarea
-                  rows={3}
-                  placeholder={
-                    composerMode === 'INTERNAL_NOTE'
-                      ? 'Write an internal note (only visible to staff & agents)...'
-                      : 'Type a reply to the requester...'
-                  }
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  className="w-full text-xs text-slate-800 placeholder:text-slate-400 border-0 focus:outline-none resize-none p-1 bg-transparent min-h-[70px]"
-                />
-
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Attach file">
-                      <Paperclip className="w-4 h-4" />
-                    </button>
-                    <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Add link">
-                      <Link2 className="w-4 h-4" />
-                    </button>
-                    <button type="button" className="p-1.5 hover:text-slate-600 rounded-lg cursor-pointer" title="Emoji">
-                      <Smile className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={submittingComment || !commentText.trim()}
-                    className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all disabled:opacity-40 cursor-pointer text-white hover:opacity-95 active:scale-95"
-                    style={{
-                      background: composerMode === 'INTERNAL_NOTE' ? '#d97706' : '#1e1b4b',
-                    }}
-                  >
-                    <span>{composerMode === 'INTERNAL_NOTE' ? 'Add Note' : 'Add Reply'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
+            <ReplyComposer
+              ticket={ticket}
+              composerMode={composerMode}
+              setComposerMode={setComposerMode}
+              onSubmitReply={handleSendReply}
+              submitting={submittingComment}
+            />
           )}
         </div>
 

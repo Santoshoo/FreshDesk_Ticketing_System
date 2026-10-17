@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   X,
   Download,
@@ -12,14 +12,31 @@ import {
   RefreshCw,
   Sparkles,
   Filter,
+  User,
+  Users,
+  UserCheck,
+  Lock,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext.jsx';
 import dashboardApi from '../../services/dashboardApi.js';
+import agentApi from '../../services/agentApi.js';
 import { exportReportData } from '../../utils/reportExporter.js';
 
 export default function ReportDownloadModal({ isOpen, onClose }) {
+  const { user, isAdmin, isSuperAdmin, isAgent } = useAuth();
+
   const [periodType, setPeriodType] = useState('all'); // 'all' | 'month' | 'week' | 'day'
   const [format, setFormat] = useState('xlsx'); // 'xlsx' | 'csv'
   const [selectedStatus, setSelectedStatus] = useState('PENDING'); // 'ALL' | 'PENDING' | 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+
+  // Report scope state:
+  // - Agent: strictly locked to 'my'
+  // - Admin & SuperAdmin: 'all' | 'my' | 'agent'
+  const [scope, setScope] = useState('all');
+  const [selectedAgentId, setSelectedAgentId] = useState('');
+  const [agentList, setAgentList] = useState([]);
+  const [loadingAgents, setLoadingAgents] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -163,6 +180,45 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
     return '';
   }, [periodType, startDate, endDate, weekRange, selectedMonth, selectedYear]);
 
+  // Load agents list for Admin/SuperAdmin to allow picking an agent
+  useEffect(() => {
+    if (isOpen && (isAdmin || isSuperAdmin)) {
+      setLoadingAgents(true);
+      agentApi
+        .list({ limit: 100 })
+        .then((res) => {
+          if (res?.success && Array.isArray(res.data)) {
+            setAgentList(res.data);
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to load agents list:', err);
+        })
+        .finally(() => {
+          setLoadingAgents(false);
+        });
+    }
+  }, [isOpen, isAdmin, isSuperAdmin]);
+
+  // Compute active scope label for badge & export
+  const activeScopeLabel = useMemo(() => {
+    if (isAgent) {
+      return `My Records (${user?.name || 'Self'})`;
+    }
+    if (scope === 'my') {
+      return `My Records Only (${user?.name || 'Self'})`;
+    }
+    if (scope === 'agent') {
+      const target = agentList.find((a) => String(a.id) === String(selectedAgentId));
+      return target
+        ? `Agent: ${target.name} (${target.employeeId || 'ID#' + target.id})`
+        : selectedAgentId
+        ? `Agent #${selectedAgentId}`
+        : 'Specific Agent (Select Below)';
+    }
+    return 'All Staff (All Agents & Employees)';
+  }, [isAgent, user, scope, agentList, selectedAgentId]);
+
   // Execute Download
   const handleDownload = async () => {
     try {
@@ -171,6 +227,38 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
       setSuccessMsg('');
 
       const params = { periodType, status: selectedStatus };
+      let exportScopeLabel = 'All Staff';
+      let filenameScope = 'ALL';
+
+      if (isAgent) {
+        // Enforce own report
+        params.scope = 'my';
+        exportScopeLabel = `Agent: ${user?.name || 'Self'} (${user?.employeeId || ''})`;
+        filenameScope = `AGENT_${(user?.name || 'Self').replace(/\s+/g, '_')}`;
+      } else if (scope === 'my') {
+        params.scope = 'my';
+        exportScopeLabel = `Admin Records: ${user?.name || 'Self'} (${user?.employeeId || ''})`;
+        filenameScope = `MY_RECORDS`;
+      } else if (scope === 'agent') {
+        if (!selectedAgentId) {
+          setError('Please select a specific agent from the dropdown.');
+          setLoading(false);
+          return;
+        }
+        params.scope = 'agent';
+        params.agentId = selectedAgentId;
+        const target = agentList.find((a) => String(a.id) === String(selectedAgentId));
+        exportScopeLabel = target
+          ? `Agent: ${target.name} (${target.employeeId || ''})`
+          : `Agent #${selectedAgentId}`;
+        filenameScope = target
+          ? `AGENT_${target.name.replace(/\s+/g, '_')}`
+          : `AGENT_${selectedAgentId}`;
+      } else {
+        params.scope = 'all';
+        exportScopeLabel = 'All Employees & Agents (Entire Organization)';
+        filenameScope = 'ALL_STAFF';
+      }
 
       if (periodType === 'day') {
         params.startDate = startDate;
@@ -211,7 +299,7 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
         setError(
           `No ${
             selectedStatus === 'ALL' ? '' : selectedStatus + ' '
-          }tickets found for the selected period (${activePeriodLabel}). The system's existing tickets were created in September 2026. Try selecting 'All Time' or 'Last Month'.`
+          }tickets found for the selected period (${activePeriodLabel}) under ${activeScopeLabel}. Try selecting 'All Time' or adjusting the status/scope filter.`
         );
         return;
       }
@@ -221,7 +309,8 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
         data: reportData,
         format,
         periodLabel: `${activePeriodLabel}${selectedStatus !== 'ALL' ? ` (${selectedStatus})` : ''}`,
-        filenamePrefix: `KIMS_Tickets_${periodType.toUpperCase()}_${selectedStatus}`,
+        scopeLabel: exportScopeLabel,
+        filenamePrefix: `KIMS_Tickets_${periodType.toUpperCase()}_${filenameScope}_${selectedStatus}`,
       });
 
       setSuccessMsg(
@@ -244,7 +333,7 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-overlay-in">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full p-6 sm:p-7 relative overflow-hidden animate-modal-in">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 max-w-lg w-full max-h-[92vh] overflow-y-auto p-6 sm:p-7 relative animate-modal-in">
         {/* Close Button */}
         <button
           type="button"
@@ -269,6 +358,119 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
             </p>
           </div>
         </div>
+
+        {/* Report Scope Section */}
+        {isAgent ? (
+          /* Locked Agent Banner: Only his/her records */
+          <div className="mb-5 p-3.5 rounded-2xl bg-indigo-50/60 border border-indigo-100/90 text-xs text-slate-700">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-bold text-indigo-950 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-indigo-600" />
+                Report Scope: Assigned Records Only
+              </span>
+              <span className="text-[10px] font-bold text-indigo-700 bg-white px-2 py-0.5 rounded-md border border-indigo-200 shadow-2xs">
+                Agent Access
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-600 mb-2">
+              Your performance export is automatically filtered to tickets assigned to you or handled by you.
+            </p>
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-indigo-100 shadow-2xs">
+              <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-[10px]">
+                {user?.name?.charAt(0) || 'A'}
+              </div>
+              <span className="font-semibold text-slate-900">{user?.name}</span>
+              <span className="text-slate-400 text-[11px]">({user?.employeeId || user?.email})</span>
+            </div>
+          </div>
+        ) : (
+          /* Flexible Admin / SuperAdmin Scope Selector */
+          <div className="mb-5">
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+              Select Report Scope
+            </label>
+            <div className="grid grid-cols-3 gap-1.5 bg-slate-100/80 p-1 rounded-2xl border border-slate-200/60 mb-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setScope('all');
+                  setError('');
+                }}
+                className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  scope === 'all'
+                    ? 'bg-white text-indigo-600 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span className="truncate">All Staff</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setScope('my');
+                  setError('');
+                }}
+                className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  scope === 'my'
+                    ? 'bg-white text-indigo-600 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" />
+                <span className="truncate">Only Me</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setScope('agent');
+                  setError('');
+                }}
+                className={`py-2 px-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  scope === 'agent'
+                    ? 'bg-white text-indigo-600 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span className="truncate">Specific Agent</span>
+              </button>
+            </div>
+
+            {/* Sub-selector when "Specific Agent" is active */}
+            {scope === 'agent' && (
+              <div className="mt-2.5 p-3 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-1.5 animate-fadeIn">
+                <label className="block text-[11px] font-semibold text-slate-700">
+                  Choose Support Agent / Employee
+                </label>
+                {loadingAgents ? (
+                  <div className="flex items-center gap-2 text-xs text-slate-500 py-1.5">
+                    <RefreshCw className="w-3 h-3 animate-spin text-indigo-600" />
+                    <span>Loading agents...</span>
+                  </div>
+                ) : (
+                  <select
+                    value={selectedAgentId}
+                    onChange={(e) => {
+                      setSelectedAgentId(e.target.value);
+                      setError('');
+                    }}
+                    className="w-full px-3 py-2 text-xs font-medium bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-2xs"
+                  >
+                    <option value="">-- Choose an agent --</option>
+                    {agentList.map((ag) => (
+                      <option key={ag.id} value={ag.id}>
+                        {ag.name} ({ag.employeeId || ag.email})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Period Type Selection Tabs */}
         <div className="mb-5">
@@ -504,12 +706,20 @@ export default function ReportDownloadModal({ isOpen, onClose }) {
             </div>
           )}
 
-          {/* Selected Scope Badge */}
-          <div className="pt-1 flex items-center justify-between text-xs text-slate-500">
-            <span>Coverage Target:</span>
-            <span className="font-semibold text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100/80">
-              {activePeriodLabel}
-            </span>
+          {/* Selected Coverage & Target Scope Badges */}
+          <div className="pt-2 border-t border-slate-200/50 space-y-1.5 text-xs text-slate-500">
+            <div className="flex items-center justify-between">
+              <span>Time Coverage:</span>
+              <span className="font-semibold text-indigo-700 bg-indigo-50/80 px-2 py-0.5 rounded-md border border-indigo-100/80">
+                {activePeriodLabel}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Target Scope:</span>
+              <span className="font-semibold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                {activeScopeLabel}
+              </span>
+            </div>
           </div>
         </div>
 
