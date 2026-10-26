@@ -21,6 +21,7 @@ export const config = {
   port: parseInt(process.env.PORT || '7777', 10),
   nodeEnv,
   databaseUrl: process.env.DATABASE_URL,
+  archiveDatabaseUrl: process.env.ARCHIVE_DATABASE_URL || 'mysql://root:Kims@123@localhost:3306/kims_freshdesk_archive',
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET || 'kims_jwt_access_secret_super_secure_key_12345',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'kims_jwt_refresh_secret_super_secure_key_67890',

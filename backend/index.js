@@ -17,9 +17,11 @@ async function startServer() {
       );
     });
 
-    // Prevent proxy ECONNRESET by ensuring server keepAlive is longer than reverse proxy timeout
-    server.keepAliveTimeout = 65000;
-    server.headersTimeout = 66000;
+    // Support long-running high-volume ingestion streams (up to 30 mins)
+    server.timeout = 1800000;
+    server.requestTimeout = 1800000;
+    server.keepAliveTimeout = 1800000;
+    server.headersTimeout = 1801000;
 
   } catch (error) {
     console.error('========== BACKEND STARTUP ERROR ==========');

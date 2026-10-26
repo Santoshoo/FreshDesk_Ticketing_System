@@ -33,7 +33,7 @@ export class UserController {
 
   async create(req, res, next) {
     try {
-      const user = await userService.createUser(req.body);
+      const user = await userService.createUser(req.body, req.user);
       res.status(201).json({ success: true, data: user });
     } catch (error) {
       next(error);
@@ -42,7 +42,7 @@ export class UserController {
 
   async update(req, res, next) {
     try {
-      const user = await userService.updateUser(req.params.id, req.body);
+      const user = await userService.updateUser(req.params.id, req.body, req.user);
       res.json({ success: true, data: user });
     } catch (error) {
       next(error);
@@ -93,7 +93,7 @@ export class UserController {
 
   async delete(req, res, next) {
     try {
-      await userService.deleteUser(req.params.id);
+      await userService.deleteUser(req.params.id, req.user);
       res.json({ success: true, message: 'User deleted successfully' });
     } catch (error) {
       next(error);
@@ -104,7 +104,7 @@ export class UserController {
     try {
       const { records, users } = req.body;
       const list = records || users || [];
-      const result = await userService.bulkUploadUsers(list);
+      const result = await userService.bulkUploadUsers(list, req.user);
       res.json({ success: true, data: result });
     } catch (error) {
       next(error);

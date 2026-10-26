@@ -18,6 +18,7 @@ import ticketRoutes from './routes/ticketRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import employeeEmailRoutes from './routes/employeeEmailRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
+import archivedTicketRoutes from './routes/archivedTicketRoutes.js';
 
 const app = express();
 
@@ -66,6 +67,7 @@ app.use('/api/v1/tickets', ticketRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/employee-emails', employeeEmailRoutes);
 app.use('/api/v1/contacts', contactRoutes);
+app.use('/api/v1/archived-tickets', archivedTicketRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import userRepository from '../repositories/userRepository.js';
 import departmentRepository from '../repositories/departmentRepository.js';
 import employeeEmailRepository from '../repositories/employeeEmailRepository.js';
+import { invalidateUserCache } from '../middleware/authMiddleware.js';
 
 export class UserService {
   async listUsers({ page = 1, limit = 50, search = '', role = '', departmentId = null, sortBy = 'id', sortOrder = 'asc' } = {}) {
@@ -61,7 +62,7 @@ export class UserService {
     return user;
   }
 
-  async createUser({ name, email, employeeId, mobile, departmentId, roleId, roleName, password, status = 'ACTIVE' }) {
+  async createUser({ name, email, employeeId, mobile, departmentId, roleId, roleName, password, status = 'ACTIVE' }, currentUser) {
     if (!name || !email || !employeeId) {
       const err = new Error('Name, Email, and Employee ID are required');
       err.statusCode = 400;
@@ -80,6 +81,16 @@ export class UserService {
     if (!finalRoleId) {
       const defaultRole = await userRepository.findRoleByName('EMPLOYEE');
       finalRoleId = defaultRole.id;
+    }
+
+    // Role protection: Only Super Admins can assign the SUPER_ADMIN role
+    if (finalRoleId) {
+      const targetRole = await userRepository.findRoleById(finalRoleId);
+      if (targetRole?.name === 'SUPER_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
+        const err = new Error('Access denied: Only Super Admins can assign the Super Admin role');
+        err.statusCode = 403;
+        throw err;
+      }
     }
 
     const initialPassword = password || 'Kims@123';
@@ -120,11 +131,18 @@ export class UserService {
     return createdUser;
   }
 
-  async updateUser(id, { name, email, employeeId, mobile, departmentId, roleId, roleName, password, status }) {
+  async updateUser(id, { name, email, employeeId, mobile, departmentId, roleId, roleName, password, status }, currentUser) {
     const existing = await userRepository.findById(parseInt(id, 10));
     if (!existing) {
       const err = new Error('User not found');
       err.statusCode = 404;
+      throw err;
+    }
+
+    // Protection: Only Super Admins can edit a Super Admin account
+    if (existing.role?.name === 'SUPER_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
+      const err = new Error('Access denied: Only Super Admins can edit a Super Admin account');
+      err.statusCode = 403;
       throw err;
     }
 
@@ -145,11 +163,22 @@ export class UserService {
       if (roleObj) updateData.roleId = roleObj.id;
     }
 
+    // Protection: Only Super Admins can assign the Super Admin role
+    if (updateData.roleId && updateData.roleId !== existing.roleId) {
+      const targetRole = await userRepository.findRoleById(updateData.roleId);
+      if (targetRole?.name === 'SUPER_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
+        const err = new Error('Access denied: Only Super Admins can assign the Super Admin role');
+        err.statusCode = 403;
+        throw err;
+      }
+    }
+
     if (password) {
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
 
     const updatedUser = await userRepository.update(parseInt(id, 10), updateData);
+    invalidateUserCache(parseInt(id, 10));
 
     if (updateData.email) {
       try {
@@ -182,7 +211,7 @@ export class UserService {
     return userRepository.findRoles();
   }
 
-  async deleteUser(id) {
+  async deleteUser(id, currentUser) {
     const userId = parseInt(id, 10);
     const existing = await userRepository.findById(userId);
     if (!existing) {
@@ -190,10 +219,27 @@ export class UserService {
       err.statusCode = 404;
       throw err;
     }
-    return userRepository.deleteUser(userId);
+
+    // Protection: Only Super Admins can delete a Super Admin account
+    if (existing.role?.name === 'SUPER_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
+      const err = new Error('Access denied: Only Super Admins can delete a Super Admin account');
+      err.statusCode = 403;
+      throw err;
+    }
+
+    // Protection: Super Admin cannot delete their own active account
+    if (currentUser?.id && existing.id === currentUser.id) {
+      const err = new Error('Cannot delete your own active account');
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const deleted = await userRepository.deleteUser(userId);
+    invalidateUserCache(userId);
+    return deleted;
   }
 
-  async bulkUploadUsers(records = []) {
+  async bulkUploadUsers(records = [], currentUser) {
     if (!Array.isArray(records) || records.length === 0) {
       const err = new Error('No user records provided for bulk import');
       err.statusCode = 400;
@@ -240,11 +286,13 @@ export class UserService {
     const roleMap = new Map();
     let agentRoleId = null;
     let employeeRoleId = null;
+    let superAdminRoleId = null;
 
     for (const r of roles) {
       const upper = (r.name || '').trim().toUpperCase();
       roleMap.set(upper, r.id);
       roleMap.set(String(r.id), r.id);
+      if (upper === 'SUPER_ADMIN') superAdminRoleId = r.id;
       if (upper === 'AGENT') agentRoleId = r.id;
       if (upper === 'EMPLOYEE') employeeRoleId = r.id;
     }
@@ -343,6 +391,28 @@ export class UserService {
         }
 
         if (existingUser) {
+          // Protection: Only Super Admins can edit or modify a Super Admin account
+          if (existingUser.role?.name === 'SUPER_ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
+            errors.push({
+              row: rowNum,
+              name: trimmedName,
+              email: normalizedEmail,
+              error: 'Access denied: Only Super Admins can edit or overwrite a Super Admin account',
+            });
+            continue;
+          }
+
+          // Protection: Only Super Admins can assign the Super Admin role
+          if (roleId === superAdminRoleId && currentUser?.role !== 'SUPER_ADMIN') {
+            errors.push({
+              row: rowNum,
+              name: trimmedName,
+              email: normalizedEmail,
+              error: 'Access denied: Only Super Admins can assign the Super Admin role',
+            });
+            continue;
+          }
+
           // Update existing user
           const updated = await userRepository.update(existingUser.id, {
             name: trimmedName,
@@ -353,9 +423,21 @@ export class UserService {
             status: finalStatus,
             mobile: rawMobile ? String(rawMobile).trim() : existingUser.mobile,
           });
+          invalidateUserCache(existingUser.id);
           updatedCount++;
           processedUsers.push({ id: updated.id, email: updated.email, name: updated.name, action: 'UPDATED' });
         } else {
+          // Protection: Only Super Admins can assign the Super Admin role on new users
+          if (roleId === superAdminRoleId && currentUser?.role !== 'SUPER_ADMIN') {
+            errors.push({
+              row: rowNum,
+              name: trimmedName,
+              email: normalizedEmail,
+              error: 'Access denied: Only Super Admins can create a Super Admin account',
+            });
+            continue;
+          }
+
           // Create new user
           const created = await userRepository.create({
             name: trimmedName,

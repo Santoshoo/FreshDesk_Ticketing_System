@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Shield,
   History,
+  Archive,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext.jsx';
 
@@ -166,6 +167,10 @@ export default function Sidebar({ isOpen, onClose }) {
                   <NavLink to="/admin/ticket-types" className={adminNavClass} onClick={onClose}>
                     <Tag className="w-3.5 h-3.5 shrink-0" />
                     <span>Ticket Types</span>
+                  </NavLink>
+                  <NavLink to="/admin/archived-tickets" className={adminNavClass} onClick={onClose}>
+                    <Archive className="w-3.5 h-3.5 shrink-0" />
+                    <span>Archived Tickets</span>
                   </NavLink>
                 </div>
               )}

@@ -16,7 +16,8 @@ export default defineConfig({
         target: `http://127.0.0.1:${BACKEND_PORT}`,
         changeOrigin: true,
         secure: false,
-        timeout: 60000,
+        timeout: 1800000,
+        proxyTimeout: 1800000,
         configure: (proxy) => {
           proxy.on('error', (err, _req, res) => {
             console.warn('[vite proxy notice]', err.message);

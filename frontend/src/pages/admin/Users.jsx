@@ -15,14 +15,17 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Shield,
 } from 'lucide-react';
 import userApi from '../../services/userApi.js';
 import departmentApi from '../../services/departmentApi.js';
 import employeeEmailApi from '../../services/employeeEmailApi.js';
 import { Modal, EmptyState } from '../../components/ui/index.jsx';
 import BulkUserUploadModal from '../../components/modals/BulkUserUploadModal.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
 
 export default function Users() {
+  const { user: currentUser, isSuperAdmin } = useAuth();
   const [users, setUsers] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -228,6 +231,9 @@ export default function Users() {
 
   // Open Edit Modal
   const openEditModal = (user) => {
+    if (user.role?.name === 'SUPER_ADMIN' && !isSuperAdmin) {
+      return;
+    }
     setActiveDropdownId(null);
     setEditingUser(user);
     setEmailSearchQuery('');
@@ -251,6 +257,9 @@ export default function Users() {
 
   // Open Delete Confirmation Modal
   const openDeleteModal = (user) => {
+    if (user.role?.name === 'SUPER_ADMIN' && !isSuperAdmin) {
+      return;
+    }
     setActiveDropdownId(null);
     setUserToDelete(user);
     setDeleteError('');
@@ -259,6 +268,14 @@ export default function Users() {
 
   const handleDeleteUser = async () => {
     if (!userToDelete) return;
+    if (userToDelete.role?.name === 'SUPER_ADMIN' && !isSuperAdmin) {
+      setDeleteError('Only Super Admins can delete a Super Admin account.');
+      return;
+    }
+    if (currentUser?.id && userToDelete.id === currentUser.id) {
+      setDeleteError('Cannot delete your own active account.');
+      return;
+    }
     try {
       setDeleteLoading(true);
       setDeleteError('');
@@ -545,26 +562,38 @@ export default function Users() {
                       </span>
                     </td>
 
-                    {/* Actions matching Screenshot: Edit + Delete icons */}
+                    {/* Actions: Edit + Delete icons or Protected badge for Super Admin */}
                     <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(u)}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                          title="Edit User"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openDeleteModal(u)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      {u.role?.name === 'SUPER_ADMIN' && !isSuperAdmin ? (
+                        <div className="flex items-center justify-end">
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200/80 shadow-xs select-none"
+                            title="Only Super Admins can edit or delete a Super Admin account"
+                          >
+                            <Shield className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Protected</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(u)}
+                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                            title="Edit User"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openDeleteModal(u)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -831,11 +860,13 @@ export default function Users() {
                 onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
                 className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               >
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
+                {roles
+                  .filter((r) => isSuperAdmin || r.name !== 'SUPER_ADMIN')
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

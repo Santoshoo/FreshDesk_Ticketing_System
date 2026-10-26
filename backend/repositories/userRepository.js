@@ -165,6 +165,13 @@ export class UserRepository {
     });
   }
 
+  async findRoleById(id) {
+    if (!id) return null;
+    return prisma.role.findUnique({
+      where: { id: parseInt(id, 10) },
+    });
+  }
+
   async deleteUser(id) {
     const userId = parseInt(id, 10);
     // Check if user has dependent tickets or comments

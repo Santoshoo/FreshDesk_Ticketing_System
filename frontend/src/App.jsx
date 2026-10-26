@@ -11,6 +11,7 @@ import MyTickets from './pages/MyTickets.jsx';
 import CreateTicket from './pages/CreateTicket.jsx';
 import TicketDetails from './pages/TicketDetails.jsx';
 import TicketLogs from './pages/TicketLogs.jsx';
+import ArchivedTickets from './pages/ArchivedTickets.jsx';
 import Reports from './pages/Reports.jsx';
 import Profile from './pages/Profile.jsx';
 
@@ -77,12 +78,28 @@ export default function App() {
               <Route path="/tickets/my" element={<MyTickets />} />
               <Route path="/tickets/create" element={<CreateTicket />} />
               <Route path="/tickets/logs" element={<TicketLogs />} />
+              <Route
+                path="/tickets/archive"
+                element={
+                  <AdminRoute>
+                    <Navigate to="/admin/archived-tickets" replace />
+                  </AdminRoute>
+                }
+              />
               <Route path="/tickets/:id" element={<TicketDetails />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Navigate to="/profile" replace />} />
 
               {/* Admin Master Data Routes */}
+              <Route
+                path="/admin/archived-tickets"
+                element={
+                  <AdminRoute>
+                    <ArchivedTickets />
+                  </AdminRoute>
+                }
+              />
               <Route
                 path="/admin/employee-emails"
                 element={
